@@ -9,7 +9,9 @@ The idea is to create a dotnet core tool that uses the FSharp.Compiler.Service t
 
 
 
-## Tools
+## Tasks 
+
+- [] find a name
 
 ## Maintainers
 

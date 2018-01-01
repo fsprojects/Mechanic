@@ -11,8 +11,10 @@ The idea is to create a dotnet core tool that uses the FSharp.Compiler.Service t
 
 ## Tasks 
 
-- [] find a name
+- find a name
 
 ## Maintainers
+
+This project will be done mostly by newcomers to the F# OSS ecosystem. This is an explicit decision in order to get more people involved. Long time members of the F# OSS sphere will mentor and try to help if things get stuck. 
 
 - @forki - Mentoring

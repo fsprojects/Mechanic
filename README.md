@@ -14,7 +14,9 @@ This depends a lot on how much information we get from the FSharp.Compiler.Servi
 * If the fsproj already contains a valid order then we don't touch it 
 * If we need to change the order then we try to keep the original order as stable as possible.
 * If we there are multiple possible orders then we take the first one and exit 
-* There may be heuristics needed to prefer certain parts of the search tree. We may try to make it opionated and force good practices 
+* There may be heuristics needed to prefer certain parts of the search tree. We may try to make it opionated and force good practices
+* Files that have similar names should be glued together if possible. 
+* Files in the same folder should be hold together if possible. 
 * If we can't find a valid order we report an error text that is easy to understand for the programmer 
 * If we can't find a valid order we may suggest how to fix the issue 
 

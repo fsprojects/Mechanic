@@ -20,6 +20,16 @@ This depends a lot on how much information we get from the FSharp.Compiler.Servi
 * If we can't find a valid order we report an error text that is easy to understand for the programmer 
 * If we can't find a valid order we may suggest how to fix the issue 
 
+### Tools
+
+For getting the project running we may want to use the following tools:
+
+* Paket for dependency management 
+* FAKE as build script
+* expecto as test framework 
+* dotnet cli
+* ionide as editor
+
 ## Tasks 
 
 - find a name

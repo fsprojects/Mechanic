@@ -26,6 +26,7 @@ This depends a lot on how much information we get from the FSharp.Compiler.Servi
 - split the work 
 - setup project structure with CI and tests
 - write some code
+- choose a license
 - testing, testing, testing
 - integration into Ionide 
 - integration into VS
@@ -36,3 +37,7 @@ This project will be done mostly by newcomers to the F# OSS ecosystem. This is a
 
 - @forki - Mentoring
 - @Krzysztof-Cieslak - Mentoring for FCS questions and Ionide integration
+
+## What about you?
+
+If you are interested in joining this project then please open an issue and let us know. We are really interested in bringing new people into the F# OSS ecosystem. Don't be shy! 

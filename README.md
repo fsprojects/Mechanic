@@ -23,6 +23,12 @@ This depends a lot on how much information we get from the FSharp.Compiler.Servi
 ## Tasks 
 
 - find a name
+- split the work 
+- setup project structure with CI and tests
+- write some code
+- testing, testing, testing
+- integration into Ionide 
+- integration into VS
 
 ## Maintainers
 

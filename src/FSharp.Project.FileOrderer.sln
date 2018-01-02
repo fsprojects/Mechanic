@@ -3,6 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26124.0
 MinimumVisualStudioVersion = 15.0.26124.0
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{6EA61FE8-490C-40B9-A66F-FFA28DECFB52}"
+	ProjectSection(SolutionItems) = preProject
+		paket.dependencies = paket.dependencies
+	EndProjectSection
+EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Project.FileOrderer.Runner", "FSharp.Project.FileOrderer.Runner\FSharp.Project.FileOrderer.Runner.fsproj", "{C323DED7-B70E-4A40-8E52-F3BE4E868D3C}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Project.FileOrderer", "FSharp.Project.FileOrderer\FSharp.Project.FileOrderer.fsproj", "{9621C527-1CC1-41CC-A8FC-0447AEDE4B8C}"

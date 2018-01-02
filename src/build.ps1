@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+Push-Location $(Split-Path -Parent $MyInvocation.MyCommand.Definition)
+
 function Find-Exe() {
   param([string]$name, [string]$root)
   return Get-ChildItem -Recurse -Include "$name" "$root" | Select-Object -First 1 -ExpandProperty FullName
@@ -10,3 +12,5 @@ $PAKET_EXE = Find-Exe -name 'paket.exe' -root '.paket'
 
 $FAKE_EXE = Find-Exe -name 'FAKE.exe' -root 'packages\build'
 & "$FAKE_EXE" build.fsx $args
+
+Pop-Location

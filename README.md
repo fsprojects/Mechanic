@@ -48,6 +48,7 @@ This is just a suggestion, maintainers may choose differently.
 ## Tasks 
 
 - find a name
+- extend this readme
 - split the work 
 - setup project structure with CI and tests
 - write some code

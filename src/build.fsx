@@ -34,6 +34,10 @@ let version =
     let version = { gitVersion with BuildMetaData = Fake.AppVeyor.AppVeyorEnvironment.BuildNumber }
     Fake.AppVeyor.UpdateBuildVersion version.InformationalVersion
     version
+  elif Fake.EnvironmentHelper.getEnvironmentVarAsBool "TRAVIS"
+  then
+    let version = { gitVersion with BuildMetaData = Fake.EnvironmentHelper.environVar "TRAVIS_JOB_NUMBER" }
+    version
   else
     { gitVersion with BuildMetaData = "local" }
 

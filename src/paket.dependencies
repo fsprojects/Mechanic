@@ -5,3 +5,7 @@ nuget Microsoft.NET.Test.Sdk
 nuget Unquote
 nuget xunit
 nuget xunit.runner.visualstudio
+
+group Build
+  source https://api.nuget.org/v3/index.json
+  nuget FAKE prerelease

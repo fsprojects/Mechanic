@@ -27,7 +27,16 @@ let mutable dotnetCliPath = "dotnet"
 let installDotNet _ = dotnetCliPath <- DotNetCli.InstallDotNetSDK dotnetCliVersion
 
 let gitVersionPath = !!"packages/**/GitVersion.exe" |> Seq.head
-let version = Fake.GitVersionHelper.GitVersion (fun ps -> { ps with ToolPath = gitVersionPath })
+let version =
+  let gitVersion = Fake.GitVersionHelper.GitVersion (fun ps -> { ps with ToolPath = gitVersionPath })
+  if Fake.EnvironmentHelper.getEnvironmentVarAsBool "APPVEYOR"
+  then
+    let version = { gitVersion with BuildMetaData = Fake.AppVeyor.AppVeyorEnvironment.BuildNumber }
+    Fake.AppVeyor.UpdateBuildVersion version.InformationalVersion
+    version
+  else
+    { gitVersion with BuildMetaData = "local" }
+
 let runDotNet args =
   let proc (info : ProcessStartInfo) =
     info.FileName <- dotnetCliPath

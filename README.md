@@ -20,15 +20,30 @@ This depends a lot on how much information we get from the FSharp.Compiler.Servi
 * If we can't find a valid order we report an error text that is easy to understand for the programmer 
 * If we can't find a valid order we may suggest how to fix the issue 
 
+## Commands
+
+In real world editing scenarios we will hardly ever need to reorder the whole file list. 
+Usually programmers already have a working state and perform changes to it. These changes may introduce small ordering issues or even circular dependencies and the tool should help to resolve these. The following commands seem to be useful:
+
+* Reorder everything based on the fsproj
+* Reorder everything based on all files in the folder structure
+* Move file up as far as possible
+* Move file down as far as possible
+* Move file somewhere below file Y
+
 ### Tools
 
 For getting the project running we may want to use the following tools:
 
 * Paket for dependency management 
 * FAKE as build script
-* expecto as test framework 
+* Argu for command line parsing
+* expecto as test framework
+* FsCheck or Hedgehog for property based testing
 * dotnet cli
 * ionide as editor
+
+This is just a suggestion, maintainers may choose differently.
 
 ## Tasks 
 

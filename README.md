@@ -7,6 +7,8 @@ There are some different opinions if this should be seen as a feature or as a li
 
 The idea is to create a dotnet core tool that uses the FSharp.Compiler.Service to find a valid file order. Since there may exist more than one valid order, the tool will write the order into the F# project file (the fsproj file). The user will then commit the fsproj into version control and build servers will use exactly the one committed version. In contrast to multi-pass compilers this will remain a step that is done explicitly by the programmer and there always needs to be at least one valid order. In this sense the tool and the fsproj are very similar to paket and the paket.lock file. 
 
+In addition to creating a standalone dotnet core CLI tool, we would probably also want to create a standalone library that could be integrated into editors. This would make integration a little simpler and could also take advantage of existing FSharp.Compiler.Service caches. In this case, we would probably want to take an exisiting FSharpChecker instance as a parameter.
+
 ### Algorithm
 
 This depends a lot on how much information we get from the FSharp.Compiler.Service. But the following properties should hold:

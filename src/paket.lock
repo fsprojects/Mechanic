@@ -854,3 +854,4 @@ GROUP Build
 NUGET
   remote: https://api.nuget.org/v3/index.json
     FAKE (5.0.0-beta010)
+    GitVersion.CommandLine (3.6.5)

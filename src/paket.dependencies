@@ -1,7 +1,7 @@
 source https://api.nuget.org/v3/index.json
 
-nuget FsCheck.Xunit 2.10.6
-nuget Microsoft.NET.Test.Sdk 15.3.0-preview-20170628-02
-nuget Unquote 4.0.0
-nuget xunit 2.2.0
-nuget xunit.runner.visualstudio 2.2.0
+nuget FsCheck.Xunit
+nuget Microsoft.NET.Test.Sdk
+nuget Unquote
+nuget xunit
+nuget xunit.runner.visualstudio

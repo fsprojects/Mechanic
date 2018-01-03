@@ -852,7 +852,6 @@ NUGET
       Microsoft.NET.Test.Sdk (>= 15.0) - restriction: >= netcoreapp1.0
 
 GROUP Build
-STORAGE: NONE
 NUGET
   remote: https://api.nuget.org/v3/index.json
     FAKE (5.0.0-beta010)

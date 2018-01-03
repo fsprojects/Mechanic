@@ -22,6 +22,8 @@ This depends a lot on how much information we get from the FSharp.Compiler.Servi
 * If we can't find a valid order we report an error text that is easy to understand for the programmer 
 * If we can't find a valid order we may suggest how to fix the issue 
 
+Algorithm discussion at [#10](https://github.com/fsprojects/AProjectHasNoName/issues/10)
+
 ## Commands
 
 In real world editing scenarios we will hardly ever need to reorder the whole file list. 

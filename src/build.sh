@@ -51,4 +51,4 @@ PAKET_EXE='.paket/paket.exe'
 run $PAKET_EXE restore
 
 FAKE_EXE="`find packages/build -iname fake.exe`"
-run $FAKE_EXE "$@" $FSIARGS $FSIARGS2 build.fsx
+run $FAKE_EXE "$@" build.fsx

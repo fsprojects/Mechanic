@@ -35,19 +35,28 @@ Usually programmers already have a working state and perform changes to it. Thes
 * Move file down as far as possible
 * Move file somewhere below file Y
 
-### Tools
+## Tools
 
-For getting the project running we may want to use the following tools:
+The following toolchain is implemented to get us started:
 
-* Paket for dependency management 
-* FAKE as build script
+* [Paket][paket] for dependency management 
+* [FAKE][fake] as build script
+* [dotnet cli][dotnet]
+* [FsCheck][fscheck] and [xUnit][xunit] for unit testing
+
+[paket]: https://fsprojects.github.io/Paket/
+[fake]: https://fake.build/
+[dotnet]: https://fake.build/
+[fscheck]: https://fscheck.github.io/FsCheck/
+[xunit]: https://xunit.github.io/
+
+To build the project and run the tests, simply run one of the build scripts in the `src` folder,
+depending on your environment; `build.ps1`, `build.sh` (with the `--use-mono` flag if under non-Windows)
+or `build.cmd`.
+
+In the future, we might also want to use e.g.
+
 * Argu for command line parsing
-* expecto as test framework
-* FsCheck or Hedgehog for property based testing
-* dotnet cli
-* ionide as editor
-
-This is just a suggestion, maintainers may choose differently.
 
 ## Tasks 
 

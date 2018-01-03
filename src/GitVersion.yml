@@ -1,0 +1,3 @@
+assembly-versioning-scheme: None
+mode: ContinuousDelivery
+next-version: 0.1.0

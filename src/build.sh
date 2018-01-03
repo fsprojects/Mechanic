@@ -42,17 +42,6 @@ fi
 PAKET_EXE='.paket/paket.exe'
 FAKE_EXE="`find packages/build -iname fake.exe`"
 
-FSIARGS=""
-FSIARGS2=""
-OS=${OS:-"unknown"}
-if [ "$OS" != "Windows_NT" ]
-then
-  # Can't use FSIARGS="--fsiargs -d:MONO" in zsh, so split it up
-  # (Can't use arrays since dash can't handle them)
-  FSIARGS="--fsiargs"
-  FSIARGS2="-d:MONO"
-fi
-
 run() {
   if [ "$USE_MONO" == true ]; then
     mono "$@"

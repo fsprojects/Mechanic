@@ -22,7 +22,7 @@ let projects = !!projectsPattern
 let srcProjects = !!projectsPattern -- testProjectsPattern
 let testProjects = !!testProjectsPattern
 
-let dotnetCliVersion = DotNetCli.getVersion()
+let dotnetCliVersion = "2.1.3"
 let mutable dotnetCliPath = "dotnet"
 let installDotNet _ = dotnetCliPath <- DotNetCli.InstallDotNetSDK dotnetCliVersion
 
@@ -65,7 +65,10 @@ let setVersion _ =
 
 let resetVersion _ = srcProjects |> Seq.iter (pokeVersion version.NuGetVersion "0.0.0")
 
-let build _ = runDotNet "build"
+let build _ = DotNetCli.Build (fun c -> 
+  { c with 
+      ToolPath = dotnetCliPath
+      Configuration = "debug" } )
 
 let test _ = testProjects |> Seq.map (sprintf "test \"%s\" --no-build") |> Seq.iter runDotNet
 

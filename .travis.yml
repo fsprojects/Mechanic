@@ -2,4 +2,4 @@ language: csharp
 mono:
   - latest
 script:
-  - .\src\build.sh --use-mono
+  - ./src/build.sh --use-mono

@@ -62,7 +62,8 @@ This is just a suggestion, maintainers may choose differently.
 ## Maintainers
 
 This project will be done mostly by newcomers to the F# OSS ecosystem. This is an explicit decision in order to get more people involved. Long time members of the F# OSS sphere will mentor and try to help if things get stuck. 
-
+ 
+- @tlycken - Infrastructure/Build
 - @forki - Mentoring
 - @Krzysztof-Cieslak - Mentoring for FCS questions and Ionide integration
 

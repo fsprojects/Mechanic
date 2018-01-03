@@ -1,0 +1,2 @@
+# Shell scripts must end with LF, not CRLF
+*.sh eol=lf

@@ -1,4 +1,4 @@
-﻿open FSharp.Project.FileOrderer
+﻿open Mechanic
 
 [<EntryPoint>]
 let main argv =

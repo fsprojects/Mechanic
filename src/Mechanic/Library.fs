@@ -1,4 +1,4 @@
-namespace FSharp.Project.FileOrderer
+namespace Mechanic
 
 module Say =
     let hello name =

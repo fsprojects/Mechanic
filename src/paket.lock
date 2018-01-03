@@ -1,3 +1,4 @@
+STORAGE: NONE
 NUGET
   remote: https://api.nuget.org/v3/index.json
     FsCheck (2.10.6) - restriction: || (>= net452) (>= netstandard1.6)
@@ -851,6 +852,7 @@ NUGET
       Microsoft.NET.Test.Sdk (>= 15.0) - restriction: >= netcoreapp1.0
 
 GROUP Build
+STORAGE: NONE
 NUGET
   remote: https://api.nuget.org/v3/index.json
     FAKE (5.0.0-beta010)

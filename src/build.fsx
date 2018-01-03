@@ -22,7 +22,7 @@ let projects = !!projectsPattern
 let srcProjects = !!projectsPattern -- testProjectsPattern
 let testProjects = !!testProjectsPattern
 
-let dotnetCliVersion = DotNetCli.getVersion()
+let dotnetCliVersion = "2.1.3"
 let mutable dotnetCliPath = "dotnet"
 let installDotNet _ = dotnetCliPath <- DotNetCli.InstallDotNetSDK dotnetCliVersion
 

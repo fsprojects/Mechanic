@@ -39,9 +39,6 @@ if [ "$SHOW_HELP" = true ]; then
   exit 1
 fi
 
-PAKET_EXE='.paket/paket.exe'
-FAKE_EXE="`find packages/build -iname fake.exe`"
-
 run() {
   if [ "$USE_MONO" == true ]; then
     mono "$@"
@@ -50,5 +47,8 @@ run() {
   fi
 }
 
+PAKET_EXE='.paket/paket.exe'
 run $PAKET_EXE restore
+
+FAKE_EXE="`find packages/build -iname fake.exe`"
 run $FAKE_EXE "$@" $FSIARGS $FSIARGS2 build.fsx

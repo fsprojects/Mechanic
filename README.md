@@ -49,7 +49,7 @@ This is just a suggestion, maintainers may choose differently.
 
 ## Tasks 
 
-- find a name (see [#12](/issues/12)) 
+- find a name (see [#12](https://github.com/fsprojects/AProjectHasNoName/issues/12)) 
 - extend this readme
 - split the work 
 - setup project structure with CI and tests

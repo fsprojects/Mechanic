@@ -5,6 +5,7 @@
     <PackageVersion>0.0.0</PackageVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Files.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

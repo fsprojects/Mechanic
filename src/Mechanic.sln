@@ -8,11 +8,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{6EA61F
 		paket.dependencies = paket.dependencies
 	EndProjectSection
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Project.FileOrderer.Runner", "FSharp.Project.FileOrderer.Runner\FSharp.Project.FileOrderer.Runner.fsproj", "{C323DED7-B70E-4A40-8E52-F3BE4E868D3C}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Mechanic.CommandLine", "Mechanic.CommandLine\Mechanic.CommandLine.fsproj", "{C323DED7-B70E-4A40-8E52-F3BE4E868D3C}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Project.FileOrderer", "FSharp.Project.FileOrderer\FSharp.Project.FileOrderer.fsproj", "{9621C527-1CC1-41CC-A8FC-0447AEDE4B8C}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Mechanic", "Mechanic\Mechanic.fsproj", "{9621C527-1CC1-41CC-A8FC-0447AEDE4B8C}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Project.FileOrderer.Tests", "FSharp.Project.FileOrderer.Tests\FSharp.Project.FileOrderer.Tests.fsproj", "{E1B1B3E7-B2C8-4E70-BCB9-F56FAA24EA93}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Mechanic.Tests", "Mechanic.Tests\Mechanic.Tests.fsproj", "{E1B1B3E7-B2C8-4E70-BCB9-F56FAA24EA93}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

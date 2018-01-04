@@ -19,7 +19,7 @@ module ProjectFile =
     let [<Literal>] XmlSchema = "http://schemas.microsoft.com/developer/msbuild/2003"
 
     let inline getNodes name (node:XmlNode) =
-        let xpath = sprintf "*[local-name() = '%s']" name
+        let xpath = sprintf ".//*[local-name() = '%s']" name
         match node.SelectNodes(xpath) with
         | null -> []
         | nodeList -> 
@@ -53,9 +53,9 @@ module ProjectFile =
         |> List.map (fun x ->
             x.Attributes.[attr].Value)
 
-    let getSourceFiles (fileName:string) (doc:XmlDocument) =
-        let dir = Path.GetDirectoryName fileName
-        parseFileNames CompileTag IncludeAttribute doc
+    let getSourceFiles (pFile:ProjectFile) =
+        let dir = Path.GetDirectoryName pFile.FileName
+        parseFileNames CompileTag IncludeAttribute pFile.Document
         |> List.map (fun x ->
             let fi = FileInfo (Path.Combine(dir, x))
             SourceFile fi.FullName)

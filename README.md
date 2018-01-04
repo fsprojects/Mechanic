@@ -51,8 +51,7 @@ The following toolchain is implemented to get us started:
 [xunit]: https://xunit.github.io/
 
 To build the project and run the tests, simply run one of the build scripts in the `src` folder,
-depending on your environment; `build.ps1`, `build.sh` (with the `--use-mono` flag if under non-Windows)
-or `build.cmd`.
+depending on your environment; `build.cmd` or `build.sh` (with the `--use-mono` flag if under non-Windows).
 
 In the future, we might also want to use e.g.
 

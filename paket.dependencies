@@ -10,5 +10,5 @@ nuget FSharp.Compiler.Service
 
 group Build
   source https://api.nuget.org/v3/index.json
-# storage:none
+#  storage:none
   nuget FAKE prerelease

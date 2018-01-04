@@ -78,10 +78,9 @@ module ProjectFile =
         doc.CreateElement tag
 
     let makeCompileNode fileName (doc:XmlDocument) =
-        let node =makeNode CompileTag doc
+        let node = makeNode CompileTag doc
         addAttribute IncludeAttribute fileName node
         
-
     let updateProjectFile (sFiles:SourceFile list) (pf:ProjectFile) =
         let rec addCompileNodes files (parent:XmlNode) =
             match files with

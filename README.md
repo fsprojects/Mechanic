@@ -41,11 +41,13 @@ The following toolchain is implemented to get us started:
 
 * [Paket][paket] for dependency management 
 * [FAKE][fake] as build script
+* [GitVersion][gitversion] for semantic versioning
 * [dotnet cli][dotnet]
 * [FsCheck][fscheck] and [xUnit][xunit] for unit testing
 
 [paket]: https://fsprojects.github.io/Paket/
 [fake]: https://fake.build/
+[gitversion]: https://github.com/GitTools/GitVersion
 [dotnet]: https://fake.build/
 [fscheck]: https://fscheck.github.io/FsCheck/
 [xunit]: https://xunit.github.io/

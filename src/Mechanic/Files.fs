@@ -91,7 +91,7 @@ module ProjectFile =
                 |> parent.AppendChild |> ignore
                 addCompileNodes xs parent
 
-        let createNewItemGroup (sFiles:SourceFile list) (pf:ProjectFile) =
+        let addNewItemGroup (sFiles:SourceFile list) (pf:ProjectFile) =
             let parent = makeNode ItemGroupTag pf.Document
             addCompileNodes sFiles parent
             |> pf.ProjectNode.AppendChild
@@ -100,11 +100,8 @@ module ProjectFile =
         match cg with
         | Some x ->
             pf.ProjectNode.RemoveChild x |> ignore
-            createNewItemGroup sFiles pf |> ignore
+            addNewItemGroup sFiles pf |> ignore
         | None -> 
-            createNewItemGroup sFiles pf |> ignore
+            addNewItemGroup sFiles pf |> ignore
 
         save pf
-
-
-    

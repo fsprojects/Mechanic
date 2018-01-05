@@ -36,7 +36,7 @@ module ProjectFile =
         |> function
            | Some n ->
              { FileName = fileName; ProjectNode = n; Document = doc}
-           | _ -> failwith "Could not locate project node in project File"
+           | _ -> failwith "Could not locate project node in project file"
 
     let loadFromFile fileName =
         let fi = FileInfo fileName
@@ -67,8 +67,8 @@ module ProjectFile =
         |> Option.defaultValue Seq.empty<string>
         |> List.ofSeq
 
-    let getSourceFiles (pFile:ProjectFile) =
-        parseSourceFileNames pFile.ProjectNode
+    let getSourceFiles (pf:ProjectFile) =
+        parseSourceFileNames pf.ProjectNode
         |> List.map (fun x ->
             let fi = FileInfo x
             { FullName  = fi.FullName
@@ -82,17 +82,17 @@ module ProjectFile =
         addAttribute IncludeAttribute fileName node
         
     let updateProjectFile (sFiles:SourceFile list) (pf:ProjectFile) =
-        let rec addCompileNodes files (parent:XmlNode) =
+        let rec addCompileNodes files (parent:XmlNode) (doc:XmlDocument) =
             match files with
             | [] -> parent
             | x::xs ->
-                makeCompileNode x.ShortName pf.Document
+                makeCompileNode x.ShortName doc
                 |> parent.AppendChild |> ignore
-                addCompileNodes xs parent
+                addCompileNodes xs parent doc
 
         let addNewItemGroup (sFiles:SourceFile list) (pf:ProjectFile) =
             let parent = makeNode ItemGroupTag pf.Document
-            addCompileNodes sFiles parent
+            addCompileNodes sFiles parent pf.Document
             |> pf.ProjectNode.AppendChild
 
         let cg = getCompileGroup pf.ProjectNode

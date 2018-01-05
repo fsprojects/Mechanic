@@ -43,7 +43,7 @@ The following toolchain is implemented to get us started:
 * [FAKE][fake] as build script
 * [GitVersion][gitversion] for semantic versioning
 * [dotnet cli][dotnet]
-* [FsCheck][fscheck] and [xUnit][xunit] for unit testing
+* [FsCheck][fscheck], [xUnit][xunit] and [Unquote][unquote] for unit testing
 
 [paket]: https://fsprojects.github.io/Paket/
 [fake]: https://fake.build/
@@ -51,6 +51,7 @@ The following toolchain is implemented to get us started:
 [dotnet]: https://fake.build/
 [fscheck]: https://fscheck.github.io/FsCheck/
 [xunit]: https://xunit.github.io/
+[unquote]: http://www.swensensoftware.com/unquote
 
 To build the project and run the tests, simply run one of the build scripts in the `src` folder,
 depending on your environment; `build.ps1`, `build.sh` (with the `--use-mono` flag if under non-Windows)

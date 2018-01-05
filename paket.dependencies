@@ -1,0 +1,14 @@
+source https://www.nuget.org/api/v2
+framework: netcoreapp2.0
+
+nuget Fsharp.Core
+nuget Expecto
+nuget Argu
+nuget Unquote
+
+nuget FSharp.Compiler.Service
+
+group Build
+  source https://api.nuget.org/v3/index.json
+#  storage:none
+  nuget FAKE prerelease

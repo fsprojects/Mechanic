@@ -1,3 +1,4 @@
 image: Visual Studio 2017
 build_script:
-  - ps: .\src\build.ps1
+  - cmd: build.cmd
+

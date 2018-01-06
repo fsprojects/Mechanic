@@ -1,11 +1,8 @@
 source https://api.nuget.org/v3/index.json
 storage:none
 
-nuget FsCheck.Xunit
 nuget Microsoft.NET.Test.Sdk
-nuget Unquote
-nuget xunit
-nuget xunit.runner.visualstudio
+nuget Expecto
 
 group Build
   source https://api.nuget.org/v3/index.json

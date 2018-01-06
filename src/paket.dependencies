@@ -7,6 +7,9 @@ nuget Unquote
 nuget xunit
 nuget xunit.runner.visualstudio
 
+git https://github.com/fsharp-editing/Forge.git master build:"build.cmd Build", OS: windows
+git https://github.com/fsharp-editing/Forge.git master build:"build.sh Build", OS: mono
+
 group Build
   source https://api.nuget.org/v3/index.json
 

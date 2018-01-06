@@ -850,7 +850,14 @@ NUGET
       xunit.extensibility.core (2.3.1) - restriction: >= netstandard1.1
     xunit.runner.visualstudio (2.3.1)
       Microsoft.NET.Test.Sdk (>= 15.0) - restriction: >= netcoreapp1.0
-
+GIT
+  remote: https://github.com/fsharp-editing/Forge.git
+     (dd4a3a8ea20514b0174d310e5a52f09916395ec4)
+      build: build.cmd Build
+      os: windows
+     (dd4a3a8ea20514b0174d310e5a52f09916395ec4)
+      build: build.sh Build
+      os: mono
 GROUP Build
 NUGET
   remote: https://api.nuget.org/v3/index.json

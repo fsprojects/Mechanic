@@ -1,4 +1,4 @@
-namespace FSharp.Project.FileOrderer
+namespace Mechanic
 
 open System
 open System.IO

@@ -2,7 +2,7 @@ module Tests
 
 open FsCheck.Xunit
 open Swensen.Unquote
-open FSharp.Project.FileOrderer
+open Mechanic
 
 [<Property>]
 let ``Say says hello to whomever we greet`` greetee =

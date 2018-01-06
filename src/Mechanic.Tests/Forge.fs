@@ -33,6 +33,7 @@ let makeTempProject () =
 [<Tests>]
 let tests =
     testList "Forge command tests" [
+
         testCase "Forge list command returns source files from project file" <| fun _ ->
             let path, pf, f1, f2 = makeTempProject()
             let output, errors, exitCode = Forge.list ForgePath pf
@@ -46,7 +47,7 @@ let tests =
             let output, errors, exitCode = Forge.moveFileDown ForgePath pf f1
             let newOrder, _, _ = Forge.list ForgePath pf
             Directory.Delete(path, true)
-            Expect.equal newOrder ["TestFile2.fs"; "TestFile1.fs"] "File names list matches"
+            Expect.equal newOrder ["TestFile2.fs"; "TestFile1.fs"] "File order is correct"
             Expect.equal errors [] "Errors are empty"
             Expect.equal exitCode 0 "Exit code is zero"
         
@@ -55,7 +56,7 @@ let tests =
             let output, errors, exitCode = Forge.moveFileUp ForgePath pf f2
             let newOrder, _, _ = Forge.list ForgePath pf
             Directory.Delete(path, true)
-            Expect.equal newOrder ["TestFile2.fs"; "TestFile1.fs"] "File names list matches"
+            Expect.equal newOrder ["TestFile2.fs"; "TestFile1.fs"] "File order is correct"
             Expect.equal errors [] "Errors are empty"
             Expect.equal exitCode 0 "Exit code is zero"
     ]

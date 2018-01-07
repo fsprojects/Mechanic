@@ -1,4 +1,4 @@
-module Tests
+module Tests.Main
 
 open FsCheck.Xunit
 open Swensen.Unquote
@@ -31,3 +31,4 @@ let ``Topological order alg`` (edges: list<int * int>) =
         let orderPos = order |> List.mapi (fun i v -> v, i) |> Map.ofList
         <@ edges |> Seq.forall (fun (v,w) -> orderPos.[v] < orderPos.[w]) @> |> test
     | Cycle _ -> <@ haveCycle nodes edges @> |> test
+

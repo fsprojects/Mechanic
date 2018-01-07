@@ -16,15 +16,11 @@ let projectFileText = """<?xml version="1.0" encoding="utf-8"?>
 <Compile Include="File3.fs" />
 </ItemGroup>
 </Project>"""
+
 let missingProjectNode = """<?xml version="1.0" encoding="utf-8"?>
 <PropertyGroup>
 <TargetFramework>netstandard2.0</TargetFramework>
-</PropertyGroup>
-<ItemGroup>
-<Compile Include="File1.fs" />
-<Compile Include="File2.fs" />
-<Compile Include="File3.fs" />
-</ItemGroup>"""
+</PropertyGroup>"""
 
 let makeTempProjFile contents =
     let file = Path.GetTempFileName()

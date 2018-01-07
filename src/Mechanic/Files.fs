@@ -95,12 +95,12 @@ module ProjectFile =
             addCompileNodes sFiles parent pf.Document
             |> pf.ProjectNode.AppendChild
 
-        let cg = getCompileGroup pf.ProjectNode
-        match cg with
-        | Some x ->
-            x.RemoveAll() |> ignore
-            addCompileNodes sFiles x pf.Document |> ignore
-        | None -> 
-            addNewItemGroup sFiles pf |> ignore
+        getCompileGroup pf.ProjectNode
+        |> function
+           | Some x ->
+               x.RemoveAll() |> ignore
+               addCompileNodes sFiles x pf.Document |> ignore
+           | None -> 
+               addNewItemGroup sFiles pf |> ignore
 
         save pf

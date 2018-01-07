@@ -1,6 +1,6 @@
-module Program = 
+module Program
 
-    open Expecto
+open Expecto
 
-    let [<EntryPoint>] main args = 
-        runTestsInAssembly defaultConfig args
+let [<EntryPoint>] main args = 
+    runTestsInAssembly defaultConfig args

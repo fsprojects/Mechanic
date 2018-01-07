@@ -7,9 +7,9 @@
   <ItemGroup>
     <Compile Include="Environment.fs" />  
     <Compile Include="Files.fs" />
+    <Compile Include="Tests.fs" />
+    <Compile Include="FileOrderTests.fs" />
     <Compile Include="Program.fs" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Mechanic\Mechanic.fsproj" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

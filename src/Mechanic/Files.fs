@@ -98,7 +98,7 @@ module ProjectFile =
         let cg = getCompileGroup pf.ProjectNode
         match cg with
         | Some x ->
-            pf.ProjectNode.RemoveAll() |> ignore
+            x.RemoveAll() |> ignore
             addCompileNodes sFiles x pf.Document |> ignore
         | None -> 
             addNewItemGroup sFiles pf |> ignore

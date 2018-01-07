@@ -6,6 +6,7 @@
     <Compile Include="Environment.fs" />  
     <Compile Include="Xml.fs" />
     <Compile Include="Files.fs" />
+    <Compile Include="AstTraverse.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

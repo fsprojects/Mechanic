@@ -20,10 +20,9 @@ module AstWalker =
 
     let rec getBind bindings =
         bindings |> Seq.map (fun binding ->
-            let (Binding(access, kind, inlin, mutabl, attrs, xmlDoc, 
-                        data, pat, retInfo, init, m, sp)) = binding
+            let (Binding(access, kind, inlin, mutabl, attrs, xmlDoc, data, pat, retInfo, init, m, sp)) = binding
             visitPattern pat)
-        |> Seq.choose id |> Seq.toList 
+        |> Seq.choose id |> Seq.toList
 
     let getDefSymbols (tree: ParsedInput) =
         let mutable xs = []
@@ -34,6 +33,9 @@ module AstWalker =
                 | _ -> None
             ) |> List.rev |> String.concat "."
         let visitor = { new AstVisitorBase<_>() with
+            //TODO: type defs
+            //TODO: record fields
+            //TODO: union fields
             override this.VisitExpr(path, subExprF, defF, e) =
                 match e with
                 | _ -> defF e
@@ -59,6 +61,7 @@ module AstWalker =
         xs
 
     let getOpenDecls (tree: ParsedInput) =
+        //TODO: open in module with scope
         let mutable xs = []
         let visitor = { new AstVisitorBase<_>() with
             override this.VisitExpr(path, subExprF, defF, e) =

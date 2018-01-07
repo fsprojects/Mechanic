@@ -3,78 +3,148 @@ namespace Mechanic
 open System
 open System.IO
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open Microsoft.FSharp.Compiler.Ast
+
+module AstWalker =
+    open AstTraversal
+
+    let visitLongIdent (ident: LongIdent) =
+        let names = String.concat "." [ for i in ident -> i.idText ]
+        names
+
+    let visitPattern = function
+        | SynPat.Named(SynPat.Wild(_), name, _, _, _) -> Some name.idText
+        | SynPat.Named(pat, name, _, _, _) -> Some name.idText
+        | SynPat.LongIdent(LongIdentWithDots(ident, _), _, _,_,_,_) -> Some <| visitLongIdent ident
+        | _ -> None
+
+    let rec getBind bindings =
+        bindings |> Seq.map (fun binding ->
+            let (Binding(access, kind, inlin, mutabl, attrs, xmlDoc, 
+                        data, pat, retInfo, init, m, sp)) = binding
+            visitPattern pat)
+        |> Seq.choose id |> Seq.toList 
+
+    let getDefSymbols (tree: ParsedInput) =
+        let mutable xs = []
+        let getNamespace path =
+            path |> List.choose (function
+                | TraverseStep.ModuleOrNamespace(SynModuleOrNamespace(lId,_,_,_,_,_,_,_)) -> Some (visitLongIdent lId)
+                | TraverseStep.Module(SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,_)) -> Some (visitLongIdent lId)
+                | _ -> None
+            ) |> List.rev |> String.concat "."
+        let visitor = { new AstVisitorBase<_>() with
+            override this.VisitExpr(path, subExprF, defF, e) =
+                match e with
+                | _ -> defF e
+            override this.VisitBinding(path, defF, x) = 
+                match path with
+                | TraverseStep.Expr _ :: _ -> defF x
+                | _ ->
+                    xs <- xs @ (getBind [x] |> List.map (fun s -> getNamespace path + "." + s)); defF x
+            }
+        Traverse(tree, visitor) |> ignore
+        xs
+    
+    let getUsedSymbols (tree: ParsedInput) =
+        let mutable xs = []
+        let visitor = { new AstVisitorBase<_>() with
+            override this.VisitExpr(path, subExprF, defF, e) =
+                match e with
+                | SynExpr.Ident(id) -> xs <- id.idText :: xs; defF e
+                | SynExpr.LongIdent(_, LongIdentWithDots(lId,_), _, _) -> xs <- visitLongIdent lId :: xs; defF e
+                | _ -> defF e
+            }
+        Traverse(tree, visitor) |> ignore
+        xs
+
+    let getOpenDecls (tree: ParsedInput) =
+        let mutable xs = []
+        let visitor = { new AstVisitorBase<_>() with
+            override this.VisitExpr(path, subExprF, defF, e) =
+                match e with | _ -> defF e
+            override this.VisitModuleDecl(defF, d) =
+                match d with
+                | SynModuleDecl.Open(LongIdentWithDots(lId, _),_) -> xs <- visitLongIdent lId :: xs; defF d
+                | _ -> defF d
+            }
+        Traverse(tree, visitor) |> ignore
+        xs
 
 module SymbolGetter =
     let checker = FSharpChecker.Create()
 
-    let parseAndTypeCheckSingleFile (file, input) = 
-        
-        let projOptions = 
-            let sysLib nm = 
-                if System.Environment.OSVersion.Platform = System.PlatformID.Win32NT then
-                    // file references only valid on Windows
-                    System.Environment.GetFolderPath(System.Environment.SpecialFolder.ProgramFilesX86) +
-                    @"\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0\" + nm + ".dll"
-                else
-                    let sysDir = System.Runtime.InteropServices.RuntimeEnvironment.GetRuntimeDirectory()
-                    let (++) a b = System.IO.Path.Combine(a,b)
-                    sysDir ++ nm + ".dll" 
+    let parseSingleFile (file, input) = 
+        let (projOptions, _) = 
+            checker.GetProjectOptionsFromScript(file, input)
+            |> Async.RunSynchronously
 
-            let fsCore4300() = 
-                if System.Environment.OSVersion.Platform = System.PlatformID.Win32NT then
-                    // file references only valid on Windows
-                    System.Environment.GetFolderPath(System.Environment.SpecialFolder.ProgramFilesX86) +
-                    @"\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0\FSharp.Core.dll"  
-                else 
-                    sysLib "FSharp.Core"
-
-            checker.GetProjectOptionsFromCommandLineArgs
-               ("tmp.fsproj",
-                [| yield "--simpleresolution" 
-                   yield "--noframework" 
-                   yield "--debug:full" 
-                   yield "--define:DEBUG" 
-                   yield "--optimize-" 
-                   yield "--out:" + "tmp.dll"
-                   yield "--doc:test.xml" 
-                   yield "--warn:3" 
-                   yield "--fullpaths" 
-                   yield "--flaterrors" 
-                   yield "--target:library" 
-                   yield file
-                   let references =
-                     [ sysLib "mscorlib" 
-                       sysLib "System"
-                       sysLib "System.Core"
-                       //fsCore4300() 
-                       ]
-                   for r in references do 
-                         yield "-r:" + r |])
+        let (parsingOptions, _) = checker.GetParsingOptionsFromProjectOptions projOptions
       
-        let (parseFileResults, checkFileResults) = 
-            checker.ParseAndCheckFileInProject(file, 0, input, projOptions) 
+        let parseFileResults = 
+            checker.ParseFile(file, input, parsingOptions) 
             |> Async.RunSynchronously
 
         // Wait until type checking succeeds (or 100 attempts)
-        match checkFileResults with
-        | FSharpCheckFileAnswer.Succeeded(res) -> parseFileResults, res
-        | res -> failwithf "Parsing did not finish... (%A)" res
+        parseFileResults
 
-    let run file =
-
+    let getSymbols file =
         let input = System.IO.File.ReadAllText file 
+        let parseFileResults = parseSingleFile(file, input)
+        let tree = parseFileResults.ParseTree.Value
 
-        let (parseFileResults, checkFileResults) = 
-            parseAndTypeCheckSingleFile(file, input)
+        let opens = AstWalker.getOpenDecls tree |> List.rev
+        let defSymbolNames = AstWalker.getDefSymbols tree |> set |> Set.toList
+        let usedSymbolNames = AstWalker.getUsedSymbols tree |> set |> Set.toList
 
-        printfn "%A" checkFileResults.Errors
-        let (defSymbols, usedSymbols) = 
-            checkFileResults.GetAllUsesOfAllSymbolsInFile() |> Async.RunSynchronously
-            |> Array.toList
-            |> List.partition (fun s -> s.IsFromDefinition)
+        file, defSymbolNames, opens, usedSymbolNames
 
-        printfn "Def: %A" (defSymbols |> List.map (fun s -> s.Symbol.FullName))
-        printfn "Used: %A" (usedSymbols |> List.map (fun s ->s.Symbol.FullName))
+module SymbolGraph =
+    let splitByDot (s:string) = s.Split('.') |> Array.filter (String.IsNullOrEmpty >> not) |> Array.toList
+    let lastPart = splitByDot >> List.last
+    let tee f x = f x; x
+    let getDependencies files =
+        let depsData = files |> List.map SymbolGetter.getSymbols
+        let allDefsMap = 
+            depsData |> Seq.collect (fun (f,defs,_,_) -> defs |> List.map (fun d -> lastPart d, (d, f)))
+            |> Seq.groupBy fst |> Seq.map (fun (k, xs) -> k, xs |> Seq.map snd |> Seq.toList) |> Map.ofSeq
+        let depsData = 
+            depsData |> List.map (fun (f,defs,opens,uses) -> 
+                f, defs, opens, uses |> List.filter (fun u -> allDefsMap |> Map.containsKey (lastPart u)))
+        // depsData |> Seq.iter (fun (f,defs,opens,uses) -> 
+        //     printfn "File: %A" f
+        //     printfn "Def: %A" defs
+        //     printfn "Opens: %A" opens
+        //     printfn "Used: %A" uses
+        // )
+        let deps =
+            depsData |> List.collect (fun (f2, defs2, opens2, uses2) ->
+                let rec merge l1 l2 =
+                    let len1 = List.length l1
+                    let len2 = List.length l2
+                    let l = min len1 len2
+                    [0..l] |> List.tryFind (fun i -> 
+                        let l1' = l1 |> List.skip i |> List.take (len1-i)
+                        let l2' = l2 |> List.take (len2-i)
+                        if l1' = [] || l2' = [] then false else Seq.forall2 (fun x y -> x = y) l1' l2')
+                    |> Option.map (fun i -> l1 @ (List.skip (min len2 (len1-i)) l2))
+                    |> Option.defaultValue (l1 @ l2)
+                let joinByDot xs = String.concat "." xs
+                let opensVariants s = ("" :: opens2) |> List.map (fun o -> merge (splitByDot o) (splitByDot s) |> joinByDot)
+                let tryFindDef s = 
+                    allDefsMap |> Map.tryFind (lastPart s)
+                    |> Option.bind (fun g -> 
+                        let r = g |> List.tryFind (fun (d,f) -> opensVariants s |> List.exists ((=)d))
+                        match r with
+                        | None -> 
+                            //printfn "No match: %s -- %A -- %A" f2 (opensVariants s) g
+                            None
+                        | Some _ -> r)
+                    |> Option.map (fun (d,f) -> f, f2, d)
+                uses2 |> List.choose tryFindDef
+            )
+            |> List.groupBy (fun (f1, f2, _) -> f1, f2) |> List.map (fun ((f1, f2), xs) -> f1, f2, xs |> List.map (fun (_,_,x) -> x))
+        printfn "%A" deps
 
 module Say =
     let hello name =

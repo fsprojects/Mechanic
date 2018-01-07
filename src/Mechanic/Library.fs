@@ -148,6 +148,12 @@ module SymbolGraph =
             )
             |> List.groupBy (fun (f1, f2, _) -> f1, f2) |> List.map (fun ((f1, f2), xs) -> f1, f2, xs |> List.map (fun (_,_,x) -> x))
         printfn "%A" deps
+        deps
+
+    let solveOrder files =
+        let deps = getDependencies files
+        let edges = deps |> List.map (fun (f1,f2,_) -> f1, f2)
+        GraphAlg.topologicalOrder files edges
 
 module Say =
     let hello name =

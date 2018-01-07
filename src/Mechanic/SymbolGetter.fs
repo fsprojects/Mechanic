@@ -13,7 +13,6 @@ let parseSingleFile (file, input) =
         checker.ParseFile(file, input, parsingOptions) 
         |> Async.RunSynchronously
 
-    // Wait until type checking succeeds (or 100 attempts)
     parseFileResults
 
 let getSymbols file =

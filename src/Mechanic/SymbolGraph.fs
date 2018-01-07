@@ -18,7 +18,7 @@ let getDependencies files =
     //     printfn "Used: %A" uses
     // )
     let deps =
-        depsData |> List.collect (fun (f2, defs2, opens2, uses2) ->
+        depsData |> List.collect (fun (f2, _, opens2, uses2) ->
             let rec merge l1 l2 =
                 let len1 = List.length l1
                 let len2 = List.length l2
@@ -34,7 +34,7 @@ let getDependencies files =
             let tryFindDef s = 
                 allDefsMap |> Map.tryFind (lastPart s)
                 |> Option.bind (fun g -> 
-                    let r = g |> List.tryFind (fun (d,f) -> opensVariants s |> List.exists ((=)d))
+                    let r = g |> List.tryFind (fun (d,_) -> opensVariants s |> List.exists ((=)d))
                     match r with
                     | None -> 
                         //printfn "No match: %s -- %A -- %A" f2 (opensVariants s) g
@@ -44,7 +44,7 @@ let getDependencies files =
             uses2 |> List.choose tryFindDef
         )
         |> List.groupBy (fun (f1, f2, _) -> f1, f2) |> List.map (fun ((f1, f2), xs) -> f1, f2, xs |> List.map (fun (_,_,x) -> x))
-    printfn "%A" deps
+    //printfn "%A" deps
     deps
 
 let solveOrder files =

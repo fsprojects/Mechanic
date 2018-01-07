@@ -3,8 +3,6 @@ module Mechanic.Environment
 open System
 open System.IO
 
-
-// Environment constants
 let [<Literal>] FsCoreName        = "FSharp.Core"
 let [<Literal>] SystemLibLocation = @"\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0"
 let [<Literal>] FsLibLocation     = @"\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0"

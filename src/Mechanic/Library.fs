@@ -1,7 +1,6 @@
 namespace Mechanic
 
 open System
-open System.IO
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Microsoft.FSharp.Compiler.Ast
 
@@ -14,13 +13,13 @@ module AstWalker =
 
     let visitPattern = function
         | SynPat.Named(SynPat.Wild(_), name, _, _, _) -> Some name.idText
-        | SynPat.Named(pat, name, _, _, _) -> Some name.idText
-        | SynPat.LongIdent(LongIdentWithDots(ident, _), _, _,_,_,_) -> Some <| visitLongIdent ident
+        | SynPat.Named(_, name, _, _, _) -> Some name.idText
+        | SynPat.LongIdent(LongIdentWithDots(ident, _), _, _, _, _, _) -> Some <| visitLongIdent ident
         | _ -> None
 
     let rec getBind bindings =
         bindings |> Seq.map (fun binding ->
-            let (Binding(access, kind, inlin, mutabl, attrs, xmlDoc, data, pat, retInfo, init, m, sp)) = binding
+            let (Binding(_, _, _, _, _, _, _, pat, _, _, _, _)) = binding
             visitPattern pat)
         |> Seq.choose id |> Seq.toList
 
@@ -28,18 +27,20 @@ module AstWalker =
         let mutable xs = []
         let getNamespace path =
             path |> List.choose (function
-                | TraverseStep.ModuleOrNamespace(SynModuleOrNamespace(lId,_,_,_,_,_,_,_)) -> Some (visitLongIdent lId)
-                | TraverseStep.Module(SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,_)) -> Some (visitLongIdent lId)
+                | TraverseStep.ModuleOrNamespace(SynModuleOrNamespace(lId,_,_,_,_,_,_,_)) -> 
+                    Some (visitLongIdent lId)
+                | TraverseStep.Module(SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,_)) -> 
+                    Some (visitLongIdent lId)
                 | _ -> None
             ) |> List.rev |> String.concat "."
         let visitor = { new AstVisitorBase<_>() with
             //TODO: type defs
             //TODO: record fields
             //TODO: union fields
-            override this.VisitExpr(path, subExprF, defF, e) =
+            override __.VisitExpr(_, subExprF, defF, e) =
                 match e with
                 | _ -> defF e
-            override this.VisitBinding(path, defF, x) = 
+            override __.VisitBinding(path, defF, x) = 
                 match path with
                 | TraverseStep.Expr _ :: _ -> defF x
                 | _ ->
@@ -51,7 +52,7 @@ module AstWalker =
     let getUsedSymbols (tree: ParsedInput) =
         let mutable xs = []
         let visitor = { new AstVisitorBase<_>() with
-            override this.VisitExpr(path, subExprF, defF, e) =
+            override __.VisitExpr(_, subExprF, defF, e) =
                 match e with
                 | SynExpr.Ident(id) -> xs <- id.idText :: xs; defF e
                 | SynExpr.LongIdent(_, LongIdentWithDots(lId,_), _, _) -> xs <- visitLongIdent lId :: xs; defF e
@@ -64,9 +65,9 @@ module AstWalker =
         //TODO: open in module with scope
         let mutable xs = []
         let visitor = { new AstVisitorBase<_>() with
-            override this.VisitExpr(path, subExprF, defF, e) =
+            override __.VisitExpr(_, subExprF, defF, e) =
                 match e with | _ -> defF e
-            override this.VisitModuleDecl(defF, d) =
+            override __.VisitModuleDecl(defF, d) =
                 match d with
                 | SynModuleDecl.Open(LongIdentWithDots(lId, _),_) -> xs <- visitLongIdent lId :: xs; defF d
                 | _ -> defF d

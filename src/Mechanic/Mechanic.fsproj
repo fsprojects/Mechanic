@@ -8,6 +8,9 @@
     <Compile Include="Files.fs" />
     <Compile Include="AstTraverse.fs" />
     <Compile Include="GraphAlg.fs" />
+    <Compile Include="AstSymbolCollector.fs" />
+    <Compile Include="SymbolGetter.fs" />
+    <Compile Include="SymbolGraph.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
   <Import Project="..\.paket\Paket.Restore.targets" />

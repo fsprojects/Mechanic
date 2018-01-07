@@ -19,6 +19,8 @@ let getDependencies files =
     // )
     let deps =
         depsData |> List.collect (fun (f2, _, opens2, uses2) ->
+            // Concat two list and merge same part on end of first list and start of second list.
+            // Ex: merge ["A";"B";"C"] ["C";"D"] = ["A";"B";"C";"D"]
             let rec merge l1 l2 =
                 let len1 = List.length l1
                 let len2 = List.length l2

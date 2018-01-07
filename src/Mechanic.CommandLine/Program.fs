@@ -3,5 +3,5 @@
 [<EntryPoint>]
 let main argv =
     Say.hello "World from F#" |> printfn "%s"
-    SymbolGraph.getDependencies (argv |> Array.toList)
+    SymbolGraph.solveOrder (argv |> Array.toList) |> printfn "%A"
     0

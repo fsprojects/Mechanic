@@ -155,7 +155,3 @@ module SymbolGraph =
         let deps = getDependencies files
         let edges = deps |> List.map (fun (f1,f2,_) -> f1, f2)
         GraphAlg.topologicalOrder files edges
-
-module Say =
-    let hello name =
-        sprintf "Hello %s" name

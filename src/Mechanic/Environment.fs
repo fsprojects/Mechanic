@@ -4,8 +4,8 @@ open System
 open System.IO
 
 let [<Literal>] FsCoreName        = "FSharp.Core"
-let [<Literal>] SystemLibLocation = @"\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.0"
-let [<Literal>] FsLibLocation     = @"\Reference Assemblies\Microsoft\FSharp\.NETFramework\v4.0\4.3.0.0"
+let [<Literal>] SystemLibLocation = @"\Reference Assemblies\Microsoft\Framework\.NETCore\v4.5.1"
+let [<Literal>] FsLibLocation     = @"\Reference Assemblies\Microsoft\FSharp\.NETCore\3.259.41.0"
 
 
 let programFiles = Environment.GetFolderPath Environment.SpecialFolder.ProgramFilesX86

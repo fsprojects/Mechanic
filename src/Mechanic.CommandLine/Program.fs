@@ -2,5 +2,8 @@
 
 [<EntryPoint>]
 let main argv =
-    SymbolGraph.solveOrder (argv |> Array.toList) |> printfn "%A"
+    let root = argv.[0]
+    let pattern = argv.[1]
+    SymbolGraph.solveOrderFromPattern root pattern 
+    |> printfn "%A"
     0

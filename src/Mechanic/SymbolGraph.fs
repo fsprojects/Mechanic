@@ -1,8 +1,10 @@
 module Mechanic.SymbolGraph
+open System.IO
 
 let splitByDot (s:string) = s.Split('.') |> Array.filter (System.String.IsNullOrEmpty >> not) |> Array.toList
 let lastPart = splitByDot >> List.last
 let tee f x = f x; x
+
 let getDependencies files =
     let depsData = files |> List.map SymbolGetter.getSymbols
     let allDefsMap = 
@@ -53,3 +55,7 @@ let solveOrder files =
     let deps = getDependencies files
     let edges = deps |> List.map (fun (f1,f2,_) -> f1, f2)
     GraphAlg.topologicalOrder files edges
+
+let solveOrderFromPattern root filePattern =
+    Directory.EnumerateFiles(root,filePattern) |> Seq.toList
+    |> solveOrder

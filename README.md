@@ -35,6 +35,12 @@ Usually programmers already have a working state and perform changes to it. Thes
 * Move file down as far as possible
 * Move file somewhere below file Y
 
+## Getting started
+
+In order to test the tool you can clone the repo and run the following command:
+
+     dotnet run -p src/Mechanic.CommandLine [path/to/a/project] *.fs
+
 ## Tools
 
 The following toolchain is implemented to get us started:

@@ -66,7 +66,7 @@ or `build.cmd`.
 
 In the future, we might also want to use e.g.
 
-* Argu for command line parsing
+* [Argu](https://github.com/fsprojects/Argu) for command line parsing
 
 ## Tasks 
 

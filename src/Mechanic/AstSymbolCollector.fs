@@ -1,6 +1,7 @@
 module Mechanic.AstSymbolCollector
 open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices.AstTraversal
+open Mechanic.Utils
 
 let visitLongIdent (ident: LongIdent) =
     let names = String.concat "." [ for i in ident -> i.idText ]
@@ -65,7 +66,13 @@ let getOpenDecls (tree: ParsedInput) =
         override __.VisitModuleDecl(defF, d) =
             match d with
             | SynModuleDecl.Open(LongIdentWithDots(lId, _),_) -> xs <- visitLongIdent lId :: xs; defF d
+            | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,_) -> xs <- visitLongIdent lId :: xs; defF d
             | _ -> defF d
+        override __.VisitModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,_,_,_)) =
+            let ident = visitLongIdent lId
+            let ident = if isModule then Namespace.removeLastPart ident else ident 
+            xs <- ident  :: xs
+            None
         }
     Traverse(tree, visitor) |> ignore
     xs

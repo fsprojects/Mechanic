@@ -9,6 +9,7 @@
     <Compile Include="Files.fs" />
     <Compile Include="AstTraverse.fs" />
     <Compile Include="GraphAlg.fs" />
+    <Compile Include="Utils.fs" />
     <Compile Include="AstSymbolCollector.fs" />
     <Compile Include="SymbolGetter.fs" />
     <Compile Include="SymbolGraph.fs" />

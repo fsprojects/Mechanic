@@ -1,9 +1,6 @@
 module Mechanic.SymbolGraph
 open System.IO
-
-let splitByDot (s:string) = s.Split('.') |> Array.filter (System.String.IsNullOrEmpty >> not) |> Array.toList
-let lastPart = splitByDot >> List.last
-let tee f x = f x; x
+open Utils.Namespace
 
 let getDependencies files =
     let depsData = files |> List.map SymbolGetter.getSymbols
@@ -33,7 +30,6 @@ let getDependencies files =
                     if l1' = [] || l2' = [] then false else Seq.forall2 (fun x y -> x = y) l1' l2')
                 |> Option.map (fun i -> l1 @ (List.skip (min len2 (len1-i)) l2))
                 |> Option.defaultValue (l1 @ l2)
-            let joinByDot xs = String.concat "." xs
             let opensVariants s = ("" :: opens2) |> List.map (fun o -> merge (splitByDot o) (splitByDot s) |> joinByDot)
             let tryFindDef s = 
                 allDefsMap |> Map.tryFind (lastPart s)

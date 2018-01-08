@@ -5,22 +5,9 @@ open System.IO
 open Expecto
 open Mechanic.Files
 
-let projectFileText = """<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
-<PropertyGroup>
-<TargetFramework>netstandard2.0</TargetFramework>
-</PropertyGroup>
-<ItemGroup>
-<Compile Include="File1.fs" />
-<Compile Include="File2.fs" />
-<Compile Include="File3.fs" />
-</ItemGroup>
-</Project>"""
+let projectFileText = """<?xml version="1.0" encoding="utf-8"?><Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>netstandard2.0</TargetFramework></PropertyGroup><ItemGroup><Compile Include="File1.fs" /><Compile Include="File2.fs" /><Compile Include="File3.fs" /></ItemGroup></Project>"""
 
-let missingProjectNode = """<?xml version="1.0" encoding="utf-8"?>
-<PropertyGroup>
-<TargetFramework>netstandard2.0</TargetFramework>
-</PropertyGroup>"""
+let missingProjectNode = """<?xml version="1.0" encoding="utf-8"?><PropertyGroup><TargetFramework>netstandard2.0</TargetFramework></PropertyGroup>"""
 
 let makeTempProjFile contents =
     let file = Path.GetTempFileName()
@@ -36,10 +23,9 @@ let makeTempProjFile contents =
          testCase "Project file is loaded and created from disk" <| fun _ ->
             let pFile = makeTempProjFile projectFileText
             let pf = ProjectFile.loadFromFile pFile
-            let expected = projectFileText.Replace(Environment.NewLine, "")
             File.Delete(pFile)
             Expect.equal pf.FileName pFile "File path is loaded correctly"
-            Expect.equal pf.Document.OuterXml expected "File contents are correct"
+            Expect.equal pf.Document.OuterXml projectFileText "File contents are correct"
 
          testCase "Project file load throws when Project node is missing" <| fun _ ->
             let pFile = makeTempProjFile missingProjectNode

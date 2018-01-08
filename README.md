@@ -60,7 +60,7 @@ The following toolchain is implemented to get us started:
 [fscheck]: https://fscheck.github.io/FsCheck/
 [expecto]: https://github.com/haf/expecto
 
-To build the project and run the tests, simply run one of the build scripts in the `src` folder,
+To build the project and run the tests, simply run one of the build scripts,
 depending on your environment; `build.ps1`, `build.sh` (with the `--use-mono` flag if under non-Windows)
 or `build.cmd`.
 

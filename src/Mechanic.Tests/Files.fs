@@ -25,7 +25,7 @@ let missingProjectNode = """<?xml version="1.0" encoding="utf-8"?>
 let makeTempProjFile contents =
     let file = Path.GetTempFileName()
     let pFile = Path.ChangeExtension(file, ".fsproj")
-    File.WriteAllText(pFile, contents)
+    File.WriteAllText(pFile, contents, Text.Encoding.UTF8)
     pFile
 
 

@@ -92,4 +92,4 @@ This project will be done mostly by newcomers to the F# OSS ecosystem. This is a
 
 ## What about you?
 
-If you are interested in joining this project then please open an issue and let us know. We are really interested in bringing new people into the F# OSS ecosystem. Don't be shy! 
+If you are interested in joining this project, then welcome! We are really interested in bringing new people into the F# OSS ecosystem. Don't be shy! One way to get started is to take a look at the list of issues to see if there is anything there you feel like you'd like to contribute with. There's a couple of ongoing discussions on how to structure the library, and especially #10 has some details on where the code base might be heading.

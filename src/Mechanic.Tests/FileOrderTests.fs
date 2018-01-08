@@ -112,10 +112,10 @@ let checkCycle source1 source2 =
         }        
 
         test "file order test 7" {
-            let source1 = """module Test1.M
+            let source1 = """module Test.M
         let x = 42
         """
-            let source2 = """module Test2
+            let source2 = """module Test.M2
         let y = M.x
         """
             checkOrder source1 source2

@@ -98,6 +98,41 @@ let y = Test1.M.x
     checkOrder source1 source2
 
 [<Fact>]
+let ``file order test 6``() =
+    let source1 = """module Test1
+module M =
+    let x = 42
+"""
+    let source2 = """module Test2
+open Test1.M
+let y = M.x
+"""
+    checkOrder source1 source2
+
+[<Fact>]
+let ``file order test 7``() =
+    let source1 = """module Test1.M
+let x = 42
+"""
+    let source2 = """module Test2
+let y = M.x
+"""
+    checkOrder source1 source2
+
+[<Fact>]
+let ``file order test 8``() =
+    let source1 = """namespace Test
+module M =
+    let x = 42
+"""
+    let source2 = """namespace Test
+module M2 =
+    let y = M.x
+"""
+    checkOrder source1 source2
+
+
+[<Fact>]
 let ``file order test - cycle``() =
     let source1 = """module Test1
 let x = Test2.y

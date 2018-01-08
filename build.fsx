@@ -69,9 +69,10 @@ let resetVersion _ = srcProjects |> Seq.iter (pokeVersion version.NuGetVersion "
 let build _ = DotNetCli.Build (fun c -> 
   { c with 
       ToolPath = dotnetCliPath
-      Configuration = "debug" } )
+      Configuration = "debug" 
+      WorkingDir = "src"} )
 
-let test _ = testProjects |> Seq.map (sprintf "test \"%s\" --no-build") |> Seq.iter runDotNet
+let test _ = testProjects |> Seq.map (sprintf "run -p \"%s\"") |> Seq.iter runDotNet
 
 // Build target definitions
 

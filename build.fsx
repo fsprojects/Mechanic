@@ -16,8 +16,8 @@ open Fake.Core.Globbing.Operators
 
 // Helpers and settings that figure themselves out
 
-let projectsPattern = "**/*.fsproj"
-let testProjectsPattern = "**/*Tests.fsproj"
+let projectsPattern = "src/**/*.fsproj"
+let testProjectsPattern = "src/**/*Tests.fsproj"
 let projects = !!projectsPattern
 let srcProjects = !!projectsPattern -- testProjectsPattern
 let testProjects = !!testProjectsPattern
@@ -27,6 +27,7 @@ let mutable dotnetCliPath = "dotnet"
 let installDotNet _ = dotnetCliPath <- DotNetCli.InstallDotNetSDK dotnetCliVersion
 
 let gitVersionPath = !!"packages/**/GitVersion.exe" |> Seq.head
+
 let version =
   let gitVersion = Fake.GitVersionHelper.GitVersion (fun ps -> { ps with ToolPath = gitVersionPath })
   if Fake.EnvironmentHelper.getEnvironmentVarAsBool "APPVEYOR"
@@ -52,7 +53,7 @@ let runDotNet args =
 
 // Build target implementations
 
-let clean _ = !!"**/bin"++"**/obj" |> CleanDirs
+let clean _ = !! "src/**/bin"++"**/obj" |> CleanDirs
 
 let pokeVersion oldVersion newVersion project =
   if Fake.Core.Xml.Read false project "" "" "/Project/PropertyGroup/PackageVersion" |> Seq.exists ((=) oldVersion)

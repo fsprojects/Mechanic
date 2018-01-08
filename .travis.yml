@@ -4,4 +4,4 @@ mono:
 before_install:
   - sudo apt-get install libunwind8
 script:
-  - ./src/build.sh --use-mono
+  - ./build.sh --use-mono

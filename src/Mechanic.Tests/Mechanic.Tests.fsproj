@@ -5,12 +5,12 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Environment.fs" />  
+    <Compile Include="Environment.fs" />
     <Compile Include="Files.fs" />
     <Compile Include="Tests.fs" />
     <Compile Include="FileOrderTests.fs" />
     <Compile Include="Program.fs" />
     <ProjectReference Include="..\Mechanic\Mechanic.fsproj" />
   </ItemGroup>
-  <Import Project="..\.paket\Paket.Restore.targets" />
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

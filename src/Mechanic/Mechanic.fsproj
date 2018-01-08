@@ -1,9 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Environment.fs" />  
+    <Compile Include="Environment.fs" />
     <Compile Include="Xml.fs" />
     <Compile Include="Files.fs" />
     <Compile Include="AstTraverse.fs" />
@@ -13,5 +14,5 @@
     <Compile Include="SymbolGraph.fs" />
     <Compile Include="Library.fs" />
   </ItemGroup>
-  <Import Project="..\.paket\Paket.Restore.targets" />
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

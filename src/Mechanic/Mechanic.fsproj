@@ -3,11 +3,12 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Environment.fs" />  
+    <Compile Include="Environment.fs" />
     <Compile Include="Xml.fs" />
     <Compile Include="Files.fs" />
     <Compile Include="AstTraverse.fs" />
     <Compile Include="GraphAlg.fs" />
+    <Compile Include="Utils.fs" />
     <Compile Include="AstSymbolCollector.fs" />
     <Compile Include="SymbolGetter.fs" />
     <Compile Include="SymbolGraph.fs" />

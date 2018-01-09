@@ -18,59 +18,56 @@ open Fake.Core.Globbing.Operators
 
 let projectsPattern = "src/**/*.fsproj"
 let testProjectsPattern = "src/**/*Tests.fsproj"
-let projects = !!projectsPattern
-let srcProjects = !!projectsPattern -- testProjectsPattern
-let testProjects = !!testProjectsPattern
+
+let srcProjects = !! projectsPattern -- testProjectsPattern
+let testProjects = !! testProjectsPattern
 
 let dotnetCliVersion = "2.1.3"
 let mutable dotnetCliPath = "dotnet"
 let installDotNet _ = dotnetCliPath <- DotNetCli.InstallDotNetSDK dotnetCliVersion
 
-let gitVersionPath = !!"packages/**/GitVersion.exe" |> Seq.head
+let gitVersionPath = !! "packages/**/GitVersion.exe" |> Seq.head
 
 let version =
-  let gitVersion = Fake.GitVersionHelper.GitVersion (fun ps -> { ps with ToolPath = gitVersionPath })
-  if Fake.EnvironmentHelper.getEnvironmentVarAsBool "APPVEYOR"
-  then
-    let version = { gitVersion with BuildMetaData = Fake.AppVeyor.AppVeyorEnvironment.BuildNumber }
-    Fake.AppVeyor.UpdateBuildVersion version.InformationalVersion
-    version
-  elif Fake.EnvironmentHelper.getEnvironmentVarAsBool "TRAVIS"
-  then
-    let version = { gitVersion with BuildMetaData = Fake.EnvironmentHelper.environVar "TRAVIS_JOB_NUMBER" }
-    version
-  else
-    { gitVersion with BuildMetaData = "local" }
+    let gitVersion = Fake.GitVersionHelper.GitVersion (fun ps -> { ps with ToolPath = gitVersionPath })
+    if Fake.EnvironmentHelper.getEnvironmentVarAsBool "APPVEYOR" then
+        let version = { gitVersion with BuildMetaData = Fake.AppVeyor.AppVeyorEnvironment.BuildNumber }
+        Fake.AppVeyor.UpdateBuildVersion version.InformationalVersion
+        version
+    elif Fake.EnvironmentHelper.getEnvironmentVarAsBool "TRAVIS" then
+        let version = { gitVersion with BuildMetaData = Fake.EnvironmentHelper.environVar "TRAVIS_JOB_NUMBER" }
+        version
+    else
+        { gitVersion with BuildMetaData = "local" }
 
 let runDotNet args =
-  let proc (info : ProcessStartInfo) =
-    info.FileName <- dotnetCliPath
-    info.WorkingDirectory <- "."
-    info.Arguments <- args
+    let proc (info : ProcessStartInfo) =
+        info.FileName <- dotnetCliPath
+        info.WorkingDirectory <- "."
+        info.Arguments <- args
 
-  let result = ProcessHelper.ExecProcess proc TimeSpan.MaxValue
-  if result <> 0 then failwithf "dotnet %s failed" args
+    let result = ProcessHelper.ExecProcess proc TimeSpan.MaxValue
+    if result <> 0 then failwithf "dotnet %s failed" args
 
 // Build target implementations
 
 let clean _ = !! "src/**/bin"++"**/obj" |> CleanDirs
 
 let pokeVersion oldVersion newVersion project =
-  if Fake.Core.Xml.Read false project "" "" "/Project/PropertyGroup/PackageVersion" |> Seq.exists ((=) oldVersion)
-  then Fake.Core.Xml.PokeInnerText project "Project/PropertyGroup/PackageVersion" newVersion
-
+    if Fake.Core.Xml.Read false project "" "" "/Project/PropertyGroup/PackageVersion" |> Seq.exists ((=) oldVersion) then 
+        Fake.Core.Xml.PokeInnerText project "Project/PropertyGroup/PackageVersion" newVersion
 
 let setVersion _ =
-  srcProjects |> Seq.iter (pokeVersion "0.0.0" version.NuGetVersion)
-  Target.ActivateFinal "ResetVersion"
+    srcProjects |> Seq.iter (pokeVersion "0.0.0" version.NuGetVersion)
+    Target.ActivateFinal "ResetVersion"
 
 let resetVersion _ = srcProjects |> Seq.iter (pokeVersion version.NuGetVersion "0.0.0")
 
 let build _ = DotNetCli.Build (fun c -> 
-  { c with 
-      ToolPath = dotnetCliPath
-      Configuration = "debug" 
-      WorkingDir = "src"} )
+    { c with 
+        ToolPath = dotnetCliPath
+        Configuration = "debug" 
+        WorkingDir = "src"} )
 
 let test _ = testProjects |> Seq.map (sprintf "run -p \"%s\"") |> Seq.iter runDotNet
 

@@ -55,10 +55,10 @@ The following toolchain is implemented to get us started:
 
 [paket]: https://fsprojects.github.io/Paket/
 [fake]: https://fake.build/
-[gitversion]: https://github.com/GitTools/GitVersion
-[dotnet]: https://fake.build/
+[gitversion]: https://github.com/GitTools/GitVersion/
+[dotnet]: https://github.com/dotnet/cli/
 [fscheck]: https://fscheck.github.io/FsCheck/
-[expecto]: https://github.com/haf/expecto
+[expecto]: https://github.com/haf/expecto/
 
 To build the project and run the tests, simply run one of the build scripts,
 depending on your environment; `build.ps1`, `build.sh` (with the `--use-mono` flag if under non-Windows)

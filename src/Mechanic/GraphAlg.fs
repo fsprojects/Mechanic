@@ -6,14 +6,17 @@ type TopologicalOrderResult<'a> =
 
 let topologicalOrder orderedNodes edges =
     //TODO: maintain original order of nodes
+    let orderPos = orderedNodes |> List.mapi (fun i v -> v, i) |> Map.ofList
     let nodes = orderedNodes |> set
     let nodeInLevel = edges |> Seq.groupBy snd |> Seq.map (fun (v, xs) -> v, Seq.length xs)
     let initZeroInLevelNodes = nodes - (nodeInLevel |> Seq.map fst |> set)
     let nodeInLevel = Seq.append nodeInLevel (initZeroInLevelNodes |> Seq.map (fun x -> x, 0)) |> Map.ofSeq
     let rec solve edges nodeLevels acc =
         let zeroInLevelNodes = nodeLevels |> Map.toSeq |> Seq.filter (fun (_, level) -> level = 0) |> Seq.map fst |> set
-        let nodeLevels = nodeLevels |> Map.filter (fun _ level -> level > 0)
+        //let nodeLevels = nodeLevels |> Map.filter (fun _ level -> level > 0)
+        let zeroInLevelNodes = if Set.isEmpty zeroInLevelNodes then Set.empty else zeroInLevelNodes |> Seq.minBy (fun v -> orderPos.[v]) |> Set.singleton
         let (edges, nodeLevels) =
+            let nodeLevels = nodeLevels |> Map.filter (fun v _ -> Set.contains v zeroInLevelNodes |> not)
             let (edgesToRemove, remainEdges) = edges |> List.partition (fun (v,_) -> Set.contains v zeroInLevelNodes)
             let nodeLevels = (nodeLevels, edgesToRemove) ||> Seq.fold (fun m (_,w) -> m |>Map.add w (m.[w]-1))
             remainEdges, nodeLevels

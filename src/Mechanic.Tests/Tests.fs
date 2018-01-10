@@ -8,12 +8,15 @@ open Mechanic.Utils
 module Gen =
     open FsCheck
     
-    type RandomGraph = RandomGraph of list<int * int>
+    type RandomGraph = RandomGraph of (list<int> * list<int * int>)
     let genEdges = 
         Gen.sized (fun s -> 
-            let nodeGen = [0..s] |> List.map Gen.constant |> Gen.oneof
-            Gen.map2 (fun x y -> x,y) nodeGen nodeGen |> Gen.listOfLength (s*s)) 
+            let nodeGen = [1..s] |> List.map Gen.constant |> Gen.oneof
+            Gen.map2 (fun x y -> x,y) nodeGen nodeGen |> Gen.listOfLength s) 
         |> Gen.map set |> Gen.map (Set.toList)
+    let genNodes = Gen.sized (fun s -> Gen.shuffle [1..s]) |> Gen.map List.ofArray
+    let genGraph = 
+        Gen.map2 (fun x y -> x,y) genNodes genEdges
         |> Arb.fromGen
         |> Arb.convert RandomGraph (fun (RandomGraph l) -> l)
     let addToConfig config =
@@ -27,7 +30,7 @@ let correctOrder edges order =
 [<Tests>]
  let tests =
     testList "GraphAlg" [
-        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 1000; endSize = 100}) "Topological order alg" <| fun (Gen.RandomGraph edges) ->
+        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 1000; endSize = 100}) "Topological order alg" <| fun (Gen.RandomGraph(nodes, edges)) ->
             let rec haveCycleAcc edges acc =
                 let (edgesFrom, edgesRemain) = edges |> List.partition (fun (v,_) -> Set.contains v acc)
                 match edgesFrom with
@@ -39,7 +42,6 @@ let correctOrder edges order =
                 | false -> true
             let haveCycle (nodes: list<int>) edges = nodes |> Seq.exists (fun v -> haveCycleAcc edges (set [v]))
             
-            let nodes = edges |> List.collect (fun (v,w) -> [v;w]) |> List.distinct
             match GraphAlg.topologicalOrder nodes edges with
             | TopologicalOrder order ->
                 Expect.equal (List.length order) (List.length nodes) "Number of nodes differs"
@@ -47,9 +49,9 @@ let correctOrder edges order =
                 Expect.all edges (fun (v,w) -> orderPos.[v] < orderPos.[w]) "Ordering must respect oriented edge"
             | Cycle _ -> Expect.isTrue (haveCycle nodes edges) "Cycle reported on graph without cycle"
 
-        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 100; endSize = 5}) "Topological order alg - min edit distance" <| fun (Gen.RandomGraph edges) ->
+        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 1000; endSize = 5}) "Topological order alg - min edit distance" <| fun (Gen.RandomGraph(nodes, edges)) ->
+            printfn "%A" (nodes, edges)
             let edges = edges |> List.filter (fun (v,w) -> v <> w)
-            let nodes = edges |> List.collect (fun (v,w) -> [v;w]) |> List.distinct
             let variants = nodes |> List.allPermutations |> List.filter (correctOrder edges)
             let editDistance order1 order2 =
                 let orderPos1 = order1 |> List.mapi (fun i v -> v, i) |> Map.ofList

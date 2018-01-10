@@ -26,6 +26,8 @@ This depends a lot on how much information we get from the FSharp.Compiler.Servi
 
 Algorithm discussion at [#10](https://github.com/fsprojects/AProjectHasNoName/issues/10)
 
+Current algorithm documentation [here](OrderingAlg.md).
+
 ## Commands
 
 In real world editing scenarios we will hardly ever need to reorder the whole file list. 

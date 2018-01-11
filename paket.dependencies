@@ -2,6 +2,7 @@ source https://api.nuget.org/v3/index.json
 storage:none
 
 nuget FSharp.Compiler.Service
+nuget FSharpx.Collections
 nuget Microsoft.NET.Test.Sdk
 nuget Expecto
 nuget Expecto.FsCheck

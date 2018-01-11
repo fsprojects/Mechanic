@@ -30,7 +30,8 @@ let correctOrder edges order =
 [<Tests>]
  let tests =
     testList "GraphAlg" [
-        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 1000; endSize = 100}) "Topological order alg" <| fun (Gen.RandomGraph(nodes, edges)) ->
+        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 100; endSize = 10}) "Topological order alg" <| fun (Gen.RandomGraph(nodes, edges)) ->
+            printfn "%A" (nodes,edges)
             let rec haveCycleAcc edges acc =
                 let (edgesFrom, edgesRemain) = edges |> List.partition (fun (v,_) -> Set.contains v acc)
                 match edgesFrom with
@@ -49,8 +50,7 @@ let correctOrder edges order =
                 Expect.all edges (fun (v,w) -> orderPos.[v] < orderPos.[w]) "Ordering must respect oriented edge"
             | Cycle _ -> Expect.isTrue (haveCycle nodes edges) "Cycle reported on graph without cycle"
 
-        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 1000; endSize = 5}) "Topological order alg - min edit distance" <| fun (Gen.RandomGraph(nodes, edges)) ->
-            printfn "%A" (nodes, edges)
+        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 100; endSize = 7}) "Topological order alg - min edit distance" <| fun (Gen.RandomGraph(nodes, edges)) ->
             let edges = edges |> List.filter (fun (v,w) -> v <> w)
             let variants = nodes |> List.allPermutations |> List.filter (correctOrder edges)
             let editDistance order1 order2 =
@@ -61,10 +61,9 @@ let correctOrder edges order =
             | _ ->
             let minOrder = variants |> List.minBy (editDistance nodes)
             let minDistance = editDistance nodes minOrder
-            match GraphAlg.topologicalOrder nodes edges, GraphAlg.topologicalOrder (nodes |> List.rev) (edges |> List.map (fun (v,w) -> w,v)) with
-            | TopologicalOrder order, TopologicalOrder orderRev ->
-                let order2 = orderRev |> List.rev
-                Expect.equal (min (editDistance nodes order) (editDistance nodes order2)) minDistance (sprintf "Not minimal edit distance %A %A %A" nodes order minOrder)
+            match GraphAlg.topologicalOrder nodes edges with
+            | TopologicalOrder order ->
+                Expect.equal (editDistance nodes order) minDistance (sprintf "Not minimal edit distance: original %A result %A min dist %A" nodes order minOrder)
             | _ -> ()
     ]
 

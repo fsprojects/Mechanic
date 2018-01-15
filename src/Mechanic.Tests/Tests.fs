@@ -22,7 +22,6 @@ module Gen =
     let addToConfig config =
         {config with arbitrary = typeof<RandomGraph>.DeclaringType::config.arbitrary}
 
-
 let correctOrder edges order =
     let orderPos = order |> List.mapi (fun i v -> v, i) |> Map.ofList
     Seq.forall (fun (v,w) -> orderPos.[v] < orderPos.[w]) edges
@@ -30,8 +29,7 @@ let correctOrder edges order =
 [<Tests>]
  let tests =
     testList "GraphAlg" [
-        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 100; endSize = 10}) "Topological order alg" <| fun (Gen.RandomGraph(nodes, edges)) ->
-            printfn "%A" (nodes,edges)
+        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 100; endSize = 100}) "Topological order alg - correctness" <| fun (Gen.RandomGraph(nodes, edges)) ->
             let rec haveCycleAcc edges acc =
                 let (edgesFrom, edgesRemain) = edges |> List.partition (fun (v,_) -> Set.contains v acc)
                 match edgesFrom with
@@ -50,12 +48,16 @@ let correctOrder edges order =
                 Expect.all edges (fun (v,w) -> orderPos.[v] < orderPos.[w]) "Ordering must respect oriented edge"
             | Cycle _ -> Expect.isTrue (haveCycle nodes edges) "Cycle reported on graph without cycle"
 
+        // this test is really slow for bigger sizes, because it check all permutations of given size
         testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 100; endSize = 7}) "Topological order alg - min edit distance" <| fun (Gen.RandomGraph(nodes, edges)) ->
             let edges = edges |> List.filter (fun (v,w) -> v <> w)
             let variants = nodes |> List.allPermutations |> List.filter (correctOrder edges)
             let editDistance order1 order2 =
                 let orderPos1 = order1 |> List.mapi (fun i v -> v, i) |> Map.ofList
-                order2 |> List.mapi (fun i v -> abs (i - orderPos1.[v])) |> List.sum
+                let rec f i = function
+                    | [] -> 0
+                    | (x::xs) -> orderPos1.[x] - i + f (i+1) xs
+                f 0 order2
             match variants with
             | [] -> ()
             | _ ->

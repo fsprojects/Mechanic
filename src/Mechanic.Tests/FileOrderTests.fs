@@ -142,4 +142,20 @@ let checkCycle source1 source2 =
         """
             checkCycle source1 source2
         }
+
+        test "file order inner module test 1" {
+            let source1 = """module Test1
+        module M1 =
+            open Test2.M2
+        module M2 =
+            let x = y
+        """
+            let source2 = """module Test2
+        module M1 =
+            open Test1.M1
+        module M2 =
+            let y = x
+        """
+            checkCycle source1 source2
+        }
     ]

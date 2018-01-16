@@ -25,6 +25,6 @@ let getSymbols file =
 
     let opens = AstSymbolCollector.getOpenDecls tree |> List.rev
     let defSymbolNames = AstSymbolCollector.getDefSymbols tree |> set |> Set.toList
-    let usedSymbolNames = AstSymbolCollector.getUsedSymbols tree |> set |> Set.toList
+    //let usedSymbolNames = AstSymbolCollector.getUsedSymbols tree |> set |> Set.toList
 
-    file, defSymbolNames, opens, usedSymbolNames
+    file, defSymbolNames, opens

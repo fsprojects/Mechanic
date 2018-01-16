@@ -5,17 +5,19 @@ open Utils.Namespace
 let getDependencies files =
     let depsData = files |> List.map SymbolGetter.getSymbols
     let allDefsMap = 
-        depsData |> Seq.collect (fun (f,defs,_,_) -> defs |> List.map (fun d -> lastPart d, (d, f)))
+        depsData |> Seq.collect (fun (f,defs,_) -> defs |> List.map (fun d -> lastPart d, (d, f)))
         |> Seq.groupBy fst |> Seq.map (fun (k, xs) -> k, xs |> Seq.map snd |> Seq.toList) |> Map.ofSeq
     let depsData = 
-        depsData |> List.map (fun (f,defs,opens,uses) -> 
-            f, defs, opens, uses |> List.filter (fun u -> allDefsMap |> Map.containsKey (lastPart u)))
-    // depsData |> Seq.iter (fun (f,defs,opens,uses) -> 
-    //     printfn "File: %A" f
-    //     printfn "Def: %A" defs
-    //     printfn "Opens: %A" opens
-    //     printfn "Used: %A" uses
-    // )
+        depsData |> List.map (fun (f,defs,opens) -> 
+            f, defs, opens |> List.map (fun o -> 
+                { o with UsedSymbols = o.UsedSymbols |> List.filter (fun u -> allDefsMap |> Map.containsKey (lastPart u)) } ))
+        |> List.collect (fun (f2, defs2, opens2) -> opens2 |> List.map (fun o -> f2, defs2, o.Opens, o.UsedSymbols))
+    depsData |> Seq.iter (fun (f,defs,opens,uses) -> 
+        printfn "File: %A" f
+        printfn "Def: %A" defs
+        printfn "Opens: %A" opens
+        printfn "Used: %A" uses
+    )
     let deps =
         depsData |> List.collect (fun (f2, _, opens2, uses2) ->
             // Concat two list and merge same part on end of first list and start of second list.
@@ -44,7 +46,7 @@ let getDependencies files =
             uses2 |> List.choose tryFindDef
         )
         |> List.groupBy (fun (f1, f2, _) -> f1, f2) |> List.map (fun ((f1, f2), xs) -> f1, f2, xs |> List.map (fun (_,_,x) -> x))
-    //printfn "%A" deps
+    printfn "%A" deps
     deps
 
 let solveOrder files =

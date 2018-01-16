@@ -68,9 +68,10 @@ module ProjectFile =
         |> List.ofSeq
 
     let getSourceFiles (pf:ProjectFile) =
+        let projectDir = FileInfo(pf.FileName).Directory.FullName
         parseSourceFileNames pf.ProjectNode
         |> List.map (fun x ->
-            let fi = FileInfo x
+            let fi = FileInfo (Path.Combine(projectDir, x))
             { FullName  = fi.FullName
               ShortName = x })
 

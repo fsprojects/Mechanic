@@ -41,6 +41,15 @@ let makeTempProjFile contents =
             File.Delete(pFile)            
             Expect.equal sfNames ["File1.fs"; "File2.fs"; "File3.fs"] "File names are correct"
 
+         testCase "Source files full path are parsed correctly" <| fun _ ->
+            let pFile = makeTempProjFile projectFileText
+            let pDir = FileInfo(pFile).Directory.FullName
+            let pf = ProjectFile.loadFromFile pFile
+            let sfNames = ProjectFile.getSourceFiles pf |> List.map (fun x -> x.FullName)
+            File.Delete(pFile)
+            let expectedPaths = ["File1.fs"; "File2.fs"; "File3.fs"] |> List.map (fun x -> Path.Combine(pDir, x))        
+            Expect.equal sfNames expectedPaths "File paths are correct"
+
          testCase "Source file order is persisted to disk correctly" <| fun _ ->
             let pFile = makeTempProjFile projectFileText
             let pf = ProjectFile.loadFromFile pFile

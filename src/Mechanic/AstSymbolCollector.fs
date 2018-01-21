@@ -48,21 +48,22 @@ let getDefSymbols (tree: ParsedInput) =
     Traverse(tree, visitor) |> ignore
     xs
 
-let getUsedSymbols defRange (tree: ParsedInput) =
+let getUsedSymbols (tree: ParsedInput) =
     let mutable xs = []
     let visitor = { new AstVisitorBase<_>() with
-        override __.VisitExpr(_, subExprF, defF, e) =
+        override __.VisitExpr(path, subExprF, defF, e) =
             match e with
-            | SynExpr.Ident(id) -> xs <- (id.idText, defRange) :: xs; defF e
+            | SynExpr.Ident(id) -> xs <- (id.idText, id.idRange) :: xs; defF e
             | SynExpr.LongIdent(_, LongIdentWithDots(lId,_), _, r) -> xs <- ((visitLongIdent lId), r) :: xs; defF e
             | _ -> defF e
         }
     Traverse(tree, visitor) |> ignore
-    xs
+    printfn "Uses: %A" xs    
+    xs |> List.map (fun (x,r) -> x,r)
 
 let getOpenDecls (tree: ParsedInput) =
     //TODO: open in module with scope
-    let getUsesInRange range = getUsedSymbols range tree |> List.filter (fun (_,r) -> Range.rangeContainsRange range r) |> List.map fst
+    let getUsesInRange range = getUsedSymbols tree |> List.filter (fun (_,r) -> Range.rangeContainsRange range r) |> List.map fst
     let mkOpenDecl xs r = { Opens = xs; UsedSymbols  = getUsesInRange r }
     let getRange path =
         path |> List.choose (function
@@ -74,9 +75,9 @@ let getOpenDecls (tree: ParsedInput) =
     let visitor = { new AstVisitorBase<_>() with
         override __.VisitExpr(_, subExprF, defF, e) =
             match e with | _ -> defF e
-        override __.VisitModuleDecl(defF, d) =
+        override __.VisitModuleDecl(path, defF, d) =
             match d with
-            | SynModuleDecl.Open(LongIdentWithDots(lId, _),r) -> xs <- ((visitLongIdent lId), r) :: xs; defF d
+            | SynModuleDecl.Open(LongIdentWithDots(lId, _),_) -> xs <- ((visitLongIdent lId), getRange path |> Option.get) :: xs; defF d
             | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> xs <- ((visitLongIdent lId), r) :: xs; defF d
             | _ -> defF d
         override __.VisitModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,_,_,r)) =
@@ -86,5 +87,5 @@ let getOpenDecls (tree: ParsedInput) =
             None
         }
     Traverse(tree, visitor) |> ignore
-    printfn "%A" xs
+    printfn "Opens: %A" xs
     xs |> List.groupBy snd |> List.map (fun (r, xs) -> mkOpenDecl (xs |> List.map fst) r)

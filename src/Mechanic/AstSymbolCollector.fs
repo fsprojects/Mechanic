@@ -58,13 +58,13 @@ let getUsedSymbols (tree: ParsedInput) =
             | _ -> defF e
         }
     Traverse(tree, visitor) |> ignore
-    printfn "Uses: %A" xs    
+    //printfn "Uses: %A" xs    
     xs |> List.map (fun (x,r) -> x,r)
 
 let getOpenDecls (tree: ParsedInput) =
     //TODO: open in module with scope
-    let getUsesInRange range = getUsedSymbols tree |> List.filter (fun (_,r) -> Range.rangeContainsRange range r) |> List.map fst
-    let mkOpenDecl xs r = { Opens = xs; UsedSymbols  = getUsesInRange r }
+    let getUsesInRange range = getUsedSymbols tree |> List.filter (fun (_,r) -> Range.rangeContainsRange range r);
+    let mkOpenDecl xs uses = { Opens = xs; UsedSymbols  = uses }
     let getRange path =
         path |> List.choose (function
             | TraverseStep.ModuleOrNamespace(SynModuleOrNamespace(_,_,_,_,_,_,_,r))
@@ -87,5 +87,19 @@ let getOpenDecls (tree: ParsedInput) =
             None
         }
     Traverse(tree, visitor) |> ignore
-    printfn "Opens: %A" xs
-    xs |> List.groupBy snd |> List.map (fun (r, xs) -> mkOpenDecl (xs |> List.map fst) r)
+    let opensAndUses = xs |> List.map (fun (x, openR) -> x, openR, getUsesInRange openR)
+    let opensWithNoUse = opensAndUses |> List.filter (fun (_,_,uses) -> List.isEmpty uses)
+    let usesWithOpens =
+        opensAndUses |> List.collect (fun (x, openR, uses) -> uses |> List.map (fun (u,r) -> u,r,x,openR)) 
+        |> List.groupBy (fun (u,r,_,_) -> u,r) |> List.map (fun ((u,_), xs) -> 
+            let opensWithRange = xs |> List.map (fun (_,_,x,openR) -> x, openR) 
+            u, (opensWithRange |> List.sortBy (fun (_,openR) -> openR.Start.Line, openR.Start.Column) |> List.map fst))
+    //printfn "UsesWithOpens: %A" usesWithOpens
+    let r =
+        let x = 
+            usesWithOpens 
+            |> List.groupBy snd |> List.map (fun (opens,g) -> opens, (g |> List.map fst))
+            |> List.map (fun (opens, uses) -> mkOpenDecl (List.rev opens) uses)
+        x @ [opensWithNoUse |> List.map (fun (o,_,_) -> o) |> fun x -> mkOpenDecl [] x]
+    //printfn "Opens: %A" r
+    r

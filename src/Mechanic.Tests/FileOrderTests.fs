@@ -47,6 +47,13 @@ let expectNotCycle sources =
     checkCycle sources 
     |> fun x -> Expect.isFalse x "Dependency cycle not expected"
 
+let expectDependency sources expectedDeps =
+    let (_, _, files) = makeTempProject sources
+    let deps = Mechanic.SymbolGraph.getDependencies files
+    Expect.sequenceEqual 
+        (deps |> List.map (fun (a,b,_) -> a,b) |> List.sort) 
+        (expectedDeps |> List.map (fun (i,j) -> List.item (i-1) files, List.item (j-1) files) |> List.sort)
+        "Dependency differs"
 
 [<Tests>]
  let tests =
@@ -59,7 +66,7 @@ let expectNotCycle sources =
         open Test1
         let y = x
         """
-            expectOrder [source1; source2]
+            expectDependency [source1; source2] [1,2]
         }
 
         test "file order test 2" {
@@ -69,7 +76,7 @@ let expectNotCycle sources =
             let source2 = """module Test2
         let y = Test1.x
         """
-            expectOrder [source1; source2]
+            expectDependency [source1; source2] [1,2]
         }
 
         test "file order test 3" {
@@ -81,7 +88,7 @@ let expectNotCycle sources =
         open Test1
         let y = M.x
         """
-            expectOrder [source1; source2]
+            expectDependency [source1; source2] [1,2]
         }
 
         test "file order test 4" {
@@ -93,7 +100,7 @@ let expectNotCycle sources =
         open Test1.M
         let y = x
         """
-            expectOrder [source1; source2]
+            expectDependency [source1; source2] [1,2]
         }        
 
         test "file order test 5" {
@@ -104,7 +111,7 @@ let expectNotCycle sources =
             let source2 = """module Test2
         let y = Test1.M.x
         """
-            expectOrder [source1; source2]
+            expectDependency [source1; source2] [1,2]
         }
 
         test "file order test 6" {
@@ -116,7 +123,7 @@ let expectNotCycle sources =
         open Test1.M
         let y = M.x
         """
-            expectOrder [source1; source2]
+            expectDependency [source1; source2] [1,2]
         }        
 
         test "file order test 7" {
@@ -126,7 +133,7 @@ let expectNotCycle sources =
             let source2 = """module Test.M2
         let y = M.x
         """
-            expectOrder [source1; source2]
+            expectDependency [source1; source2] [1,2]
         }        
 
         test "file order test 8" {
@@ -138,7 +145,7 @@ let expectNotCycle sources =
         module M2 =
             let y = M.x
         """
-            expectOrder [source1; source2]
+            expectDependency [source1; source2] [1,2]
         }        
 
         test "file order test cycle" {
@@ -165,7 +172,7 @@ let expectNotCycle sources =
         module M2 =
             let y = x
         """
-            expectOrder [source1; source3; source2]
+            expectDependency [source1; source2; source3] [1,3]
         }
 
         test "file order inner module test 2" {
@@ -181,6 +188,6 @@ let expectNotCycle sources =
             open Test2
             let y = x
         """
-            expectOrder [source2; source3; source1]
+            expectDependency [source1; source2; source3] [2,3]
         }
     ]

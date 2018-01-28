@@ -190,4 +190,20 @@ let expectDependency sources expectedDeps =
         """
             expectDependency [source1; source2; source3] [2,3]
         }
+
+        test "file order inner module test 3" {
+            let source1 = """module Test1
+        let x = 1
+        """
+            let source2 = """module Test2
+        let x = 1
+        """
+            let source3 = """module Test3
+        module M1 =
+            open Test1
+            open Test2
+            let y = x
+        """
+            expectDependency [source1; source2; source3] [2,3]
+        }
     ]

@@ -25,6 +25,5 @@ let getSymbols file =
 
     let opens = AstSymbolCollector.getOpenDecls tree
     let defSymbolNames = AstSymbolCollector.getDefSymbols tree |> set |> Set.toList |> List.filter (fun x -> x.StartsWith "op_" |> not)
-    //let usedSymbolNames = AstSymbolCollector.getUsedSymbols tree |> set |> Set.toList
 
     file, defSymbolNames, opens

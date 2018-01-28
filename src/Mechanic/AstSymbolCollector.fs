@@ -65,7 +65,7 @@ let getOpenDecls (tree: ParsedInput) =
     //TODO: open in module with scope
     let getUsesInRange range = getUsedSymbols tree |> List.filter (fun (_,r) -> Range.rangeContainsRange range r);
     let mkOpenDecl xs uses = { Opens = xs; UsedSymbols  = uses }
-    let getRange path =
+    let getScope path =
         path |> List.choose (function
             | TraverseStep.ModuleOrNamespace(SynModuleOrNamespace(_,_,_,_,_,_,_,r))
             | TraverseStep.Module(SynModuleDecl.NestedModule(_,_,_,_,r)) -> Some r
@@ -77,29 +77,29 @@ let getOpenDecls (tree: ParsedInput) =
             match e with | _ -> defF e
         override __.VisitModuleDecl(path, defF, d) =
             match d with
-            | SynModuleDecl.Open(LongIdentWithDots(lId, _),_) -> xs <- ((visitLongIdent lId), getRange path |> Option.get) :: xs; defF d
-            | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> xs <- ((visitLongIdent lId), r) :: xs; defF d
+            | SynModuleDecl.Open(LongIdentWithDots(lId, _),r) -> xs <- ((visitLongIdent lId), r.Start, getScope path |> Option.get) :: xs; defF d
+            | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> xs <- ((visitLongIdent lId), r.Start, r) :: xs; defF d
             | _ -> defF d
         override __.VisitModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,_,_,r)) =
             let ident = visitLongIdent lId
             let ident = if isModule then Namespace.removeLastPart ident else ident 
-            xs <- (ident, r) :: xs
+            xs <- (ident, r.Start, r) :: xs
             None
         }
     Traverse(tree, visitor) |> ignore
-    let opensAndUses = xs |> List.map (fun (x, openR) -> x, openR, getUsesInRange openR)
-    let opensWithNoUse = opensAndUses |> List.filter (fun (_,_,uses) -> List.isEmpty uses)
+    let opensAndUses = xs |> List.map (fun (x, pos, openR) -> x, pos, openR, getUsesInRange openR)
+    let opensWithNoUse = opensAndUses |> List.filter (fun (_,_,_,uses) -> List.isEmpty uses)
     let usesWithOpens =
-        opensAndUses |> List.collect (fun (x, openR, uses) -> uses |> List.map (fun (u,r) -> u,r,x,openR)) 
-        |> List.groupBy (fun (u,r,_,_) -> u,r) |> List.map (fun ((u,_), xs) -> 
-            let opensWithRange = xs |> List.map (fun (_,_,x,openR) -> x, openR) 
-            u, (opensWithRange |> List.sortBy (fun (_,openR) -> openR.Start.Line, openR.Start.Column) |> List.map fst))
+        opensAndUses |> List.collect (fun (x, openPos, openR, uses) -> uses |> List.map (fun (u,r) -> u,r,x,openPos,openR))
+        |> List.groupBy (fun (u,r,_,_,_) -> u,r) |> List.map (fun ((u,_), xs) -> 
+            let opensWithRange = xs |> List.map (fun (_,_,x,openPos,openR) -> x, openPos, openR) 
+            u, (opensWithRange |> List.sortBy (fun (_,openPos,openR) -> openPos.Line, openPos.Column) |> List.map (fun (x,_,_) -> x)))
     //printfn "UsesWithOpens: %A" usesWithOpens
     let r =
         let x = 
             usesWithOpens 
             |> List.groupBy snd |> List.map (fun (opens,g) -> opens, (g |> List.map fst))
             |> List.map (fun (opens, uses) -> mkOpenDecl (List.rev opens) uses)
-        x @ [opensWithNoUse |> List.map (fun (o,_,_) -> o) |> fun x -> mkOpenDecl [] x]
+        x @ [opensWithNoUse |> List.map (fun (o,_,_,_) -> o) |> fun x -> mkOpenDecl [] x]
     //printfn "Opens: %A" r
     r

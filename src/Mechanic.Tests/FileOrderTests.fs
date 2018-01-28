@@ -146,6 +146,18 @@ let expectDependency sources expectedDeps =
             let y = M.x
         """
             expectDependency [source1; source2] [1,2]
+        }
+
+        test "file order test let static" {
+            let source1 = """namespace Test
+        type T() =
+            static let x = 42
+        """
+            let source2 = """namespace Test
+        module M2 =
+            let y = T.x
+        """
+            expectDependency [source1; source2] [1,2]
         }        
 
         test "file order test cycle" {

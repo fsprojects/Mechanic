@@ -32,6 +32,8 @@ let getDefSymbols (tree: ParsedInput) =
                 Some (visitLongIdent lId)
             | TraverseStep.Module(SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,_)) -> 
                 Some (visitLongIdent lId)
+            | TraverseStep.TypeDefn(SynTypeDefn.TypeDefn(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_)) -> 
+                Some (visitLongIdent lId)
             | _ -> None
         ) |> List.rev |> String.concat "."
     let visitor = { new AstVisitorBase<_>() with

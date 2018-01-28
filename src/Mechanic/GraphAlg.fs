@@ -23,19 +23,13 @@ let getMinCycle (nodes: list<_>) edges =
     nodes |> List.map (fun v -> getCycleAcc edgesMap [v]) |> choosePick (Seq.minBy (List.length))
 
 let topologicalOrder orderedNodes edges =
-    //TODO: maintain original order of nodes
+    let orderPos = orderedNodes |> List.mapi (fun i v -> v, i) |> Map.ofList
     let nodes = orderedNodes |> set
     let nodeInLevel = edges |> Seq.groupBy snd |> Seq.map (fun (v, xs) -> v, Seq.length xs)
     let initZeroInLevelNodes = nodes - (nodeInLevel |> Seq.map fst |> set)
     let nodeInLevel = Seq.append nodeInLevel (initZeroInLevelNodes |> Seq.map (fun x -> x, 0)) |> Map.ofSeq
-    let rec solve edges nodeLevels acc =
+    let rec solve (nodeLevels, edges, acc) =
         let zeroInLevelNodes = nodeLevels |> Map.toSeq |> Seq.filter (fun (_, level) -> level = 0) |> Seq.map fst |> set
-        let nodeLevels = nodeLevels |> Map.filter (fun _ level -> level > 0)
-        let (edges, nodeLevels) =
-            let (edgesToRemove, remainEdges) = edges |> List.partition (fun (v,_) -> Set.contains v zeroInLevelNodes)
-            let nodeLevels = (nodeLevels, edgesToRemove) ||> Seq.fold (fun m (_,w) -> m |>Map.add w (m.[w]-1))
-            remainEdges, nodeLevels
-        let acc = acc @ (Set.toList zeroInLevelNodes)
         match edges, Set.count zeroInLevelNodes with
         | [], 0 -> TopologicalOrder acc
         | (_ :: _), 0 -> 
@@ -44,8 +38,20 @@ let topologicalOrder orderedNodes edges =
             match getMinCycle (Set.toList cycleNodes) (edges |> List.filter (fun (v,w) -> Set.contains v cycleNodes && Set.contains w cycleNodes)) with
             | Some c -> Cycle c
             | None -> failwith ""
-        | _ -> solve edges nodeLevels acc
-    match solve edges nodeInLevel [] with
+        | _ -> 
+            let next = 
+                zeroInLevelNodes |> Seq.sortBy (fun n -> orderPos.[n]) |> Seq.map (fun n ->
+                    let (edges, nodeLevels) =
+                        let nodeLevels = nodeLevels |> Map.filter (fun v _ -> v <> n)
+                        let (edgesToRemove, remainEdges) = edges |> List.partition (fun (v,_) -> v = n)
+                        let nodeLevels = (nodeLevels, edgesToRemove) ||> Seq.fold (fun m (_,w) -> m |> Map.add w (m.[w]-1))
+                        remainEdges, nodeLevels
+                    let acc = acc @ [n]
+                    nodeLevels, edges, acc
+                ) |> Seq.tryHead
+            next |> Option.map solve |> Option.defaultValue (TopologicalOrder acc)
+    
+    match solve (nodeInLevel, edges, []) with
     | TopologicalOrder result ->
         let islandNodes = nodes - (set result)
         TopologicalOrder (Set.toList islandNodes @ result)

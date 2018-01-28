@@ -160,7 +160,6 @@ let expectDependency sources expectedDeps =
             expectDependency [source1; source2] [1,2]
         }        
 
-
         test "file order test cycle" {
             let source1 = """module Test1
         let x = Test2.y

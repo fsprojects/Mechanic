@@ -4,6 +4,24 @@ type TopologicalOrderResult<'a> =
     | TopologicalOrder of 'a list
     | Cycle of 'a list
 
+let getMinCycle (nodes: list<_>) edges = 
+    let choosePick f xs =
+        match xs |> List.choose id with
+        | [] -> None
+        | xs -> xs |> f |> Some
+    let rec getCycleAcc edgesMap path =
+        match path with
+        | [] -> failwith ""
+        | (v::vs) ->
+        match vs |> List.contains v with
+        | true -> Some vs
+        | false ->
+        let nodes = edgesMap |> Map.tryFind v |> Option.defaultValue []
+        nodes |> List.map (fun v -> getCycleAcc edgesMap (v :: path)) |> choosePick (Seq.minBy (List.length))
+
+    let edgesMap = edges |> Seq.groupBy fst |> Seq.map (fun (v,g) -> v, g |> Seq.map snd |> Seq.toList) |> Map.ofSeq
+    nodes |> List.map (fun v -> getCycleAcc edgesMap [v]) |> choosePick (Seq.minBy (List.length))
+
 let topologicalOrder orderedNodes edges =
     let orderPos = orderedNodes |> List.mapi (fun i v -> v, i) |> Map.ofList
     let nodes = orderedNodes |> set
@@ -16,7 +34,10 @@ let topologicalOrder orderedNodes edges =
         | [], 0 -> TopologicalOrder acc
         | (_ :: _), 0 -> 
             //TODO: remove nodes not part of cycle
-            Cycle (nodeLevels |> Map.toList |> List.map fst)
+            let cycleNodes = nodeLevels |> Map.toList |> List.map fst |> set
+            match getMinCycle (Set.toList cycleNodes) (edges |> List.filter (fun (v,w) -> Set.contains v cycleNodes && Set.contains w cycleNodes)) with
+            | Some c -> Cycle c
+            | None -> failwith ""
         | _ -> 
             let next = 
                 zeroInLevelNodes |> Seq.sortBy (fun n -> orderPos.[n]) |> Seq.map (fun n ->

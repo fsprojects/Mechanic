@@ -2,6 +2,7 @@ module Mechanic.SymbolGraph
 open System.IO
 open Utils.Namespace
 open Mechanic.Utils
+open Mechanic.GraphAlg
 
 let getDependencies files =
     let depsData = files |> List.map SymbolGetter.getSymbols
@@ -49,14 +50,20 @@ let getDependencies files =
                 |> Option.map (fun (d,f) -> f, f2, d)
             uses2 |> List.choose tryFindDef
         )
-        |> List.groupBy (fun (f1, f2, _) -> f1, f2) |> List.map (fun ((f1, f2), xs) -> f1, f2, xs |> List.map (fun (_,_,x) -> x))
+        |> List.filter (fun (f1,f2,_) -> f1 <> f2) 
+        |> List.groupBy (fun (f1, f2, _) -> f1, f2) |> List.map (fun ((f1, f2), xs) -> 
+            f1, f2, xs |> List.map (fun (_,_,x) -> x) |> List.distinct)
     //printfn "%A" deps
     deps
 
 let solveOrder files =
     let deps = getDependencies files
     let edges = deps |> List.map (fun (f1,f2,_) -> f1, f2)
-    GraphAlg.topologicalOrder files edges
+    match GraphAlg.topologicalOrder files edges with
+    | TopologicalOrderResult.Cycle xs ->
+        printfn "Cycle with %A" (deps |> List.filter (fun (x,y,_) -> List.contains x xs && List.contains y xs))
+        TopologicalOrderResult.Cycle xs
+    | x-> x
 
 let solveOrderFromPattern root filePattern =
     Directory.EnumerateFiles(root,filePattern) |> Seq.toList

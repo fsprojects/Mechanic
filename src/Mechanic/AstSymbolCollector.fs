@@ -4,6 +4,8 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices.AstTraversal
 open Mechanic.Utils
 
+type OpenDecl = { OpenName: string; Pos: Range.pos; Range: Range.range }
+type SymbolUse = { SymbolName: string; Range: Range.range }
 type OpenDeclGroup = { Opens: list<string>; UsedSymbols: list<string> }
 
 let visitLongIdent (ident: LongIdent) =
@@ -59,11 +61,11 @@ let getUsedSymbols (tree: ParsedInput) =
         }
     Traverse(tree, visitor) |> ignore
     //printfn "Uses: %A" xs    
-    xs |> List.map (fun (x,r) -> x,r)
+    xs |> List.map (fun (x,r) -> {SymbolName = x; Range = r})
 
 let getOpenDecls (tree: ParsedInput) =
     //TODO: open in module with scope
-    let getUsesInRange range = getUsedSymbols tree |> List.filter (fun (_,r) -> Range.rangeContainsRange range r);
+    let getUsesInRange range = getUsedSymbols tree |> List.filter (fun u -> Range.rangeContainsRange range u.Range);
     let mkOpenDecl xs uses = { Opens = xs; UsedSymbols  = uses }
     let getScope path =
         path |> List.choose (function
@@ -87,19 +89,18 @@ let getOpenDecls (tree: ParsedInput) =
             None
         }
     Traverse(tree, visitor) |> ignore
-    let opensAndUses = xs |> List.map (fun (x, pos, openR) -> x, pos, openR, getUsesInRange openR)
-    let opensWithNoUse = opensAndUses |> List.filter (fun (_,_,_,uses) -> List.isEmpty uses)
+    let opensAndUses = xs |> List.map (fun (x, pos, openR) -> { OpenName = x; Pos = pos; Range = openR }, getUsesInRange openR)
+    let opensWithNoUse = opensAndUses |> List.filter (fun (_,uses) -> List.isEmpty uses)
     let usesWithOpens =
-        opensAndUses |> List.collect (fun (x, openPos, openR, uses) -> uses |> List.map (fun (u,r) -> u,r,x,openPos,openR))
-        |> List.groupBy (fun (u,r,_,_,_) -> u,r) |> List.map (fun ((u,_), xs) -> 
-            let opensWithRange = xs |> List.map (fun (_,_,x,openPos,openR) -> x, openPos, openR) 
-            u, (opensWithRange |> List.sortBy (fun (_,openPos,openR) -> openPos.Line, openPos.Column) |> List.map (fun (x,_,_) -> x)))
+        opensAndUses |> List.collect (fun (openD, uses) -> uses |> List.map (fun u -> u, openD))
+        |> List.groupBy (fun (u,_) -> u.SymbolName, u.Range) |> List.map (fun ((u,_), xs) -> 
+            let opensWithRange = xs |> List.map snd 
+            u, (opensWithRange |> List.sortBy (fun o -> o.Pos.Line, o.Pos.Column) |> List.map (fun o -> o.OpenName)))
     //printfn "UsesWithOpens: %A" usesWithOpens
     let r =
-        let x = 
+        let openGroups = 
             usesWithOpens 
-            |> List.groupBy snd |> List.map (fun (opens,g) -> opens, (g |> List.map fst))
-            |> List.map (fun (opens, uses) -> mkOpenDecl (List.rev opens) uses)
-        x @ [opensWithNoUse |> List.map (fun (o,_,_,_) -> o) |> fun x -> mkOpenDecl [] x]
+            |> List.groupBy snd |> List.map (fun (opens,g) -> mkOpenDecl (List.rev opens) (g |> List.map fst))
+        openGroups @ [opensWithNoUse |> List.map (fun (o,_) -> o.OpenName) |> fun x -> mkOpenDecl [] x]
     //printfn "Opens: %A" r
     r

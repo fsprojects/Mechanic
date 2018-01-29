@@ -64,8 +64,8 @@ module internal AstTraversal =
         abstract VisitImplicitInherit : (SynExpr -> 'T option) * SynType * SynExpr * range -> 'T option
         default this.VisitImplicitInherit(defaultTraverse, _ty, expr, _m) = defaultTraverse expr
         /// VisitModuleDecl allows overriding module declaration behavior
-        abstract VisitModuleDecl : (SynModuleDecl -> 'T option) * SynModuleDecl -> 'T option
-        default this.VisitModuleDecl(defaultTraverse, decl) = defaultTraverse decl
+        abstract VisitModuleDecl : TraversePath * (SynModuleDecl -> 'T option) * SynModuleDecl -> 'T option
+        default this.VisitModuleDecl(_path, defaultTraverse, decl) = defaultTraverse decl
         /// VisitBinding allows overriding binding behavior (note: by default it would defaultTraverse expression)
         abstract VisitBinding : TraversePath * (SynBinding -> 'T option) * SynBinding -> 'T option
         default this.VisitBinding(_path, defaultTraverse, binding) = defaultTraverse binding
@@ -129,7 +129,7 @@ module internal AstTraversal =
                 | SynModuleDecl.Attributes(_synAttributes, _range) -> None
                 | SynModuleDecl.HashDirective(_parsedHashDirective, range) -> visitor.VisitHashDirective range
                 | SynModuleDecl.NamespaceFragment(synModuleOrNamespace) -> traverseSynModuleOrNamespace path synModuleOrNamespace
-            visitor.VisitModuleDecl(defaultTraverse, decl)
+            visitor.VisitModuleDecl(path, defaultTraverse, decl)
 
         and traverseSynModuleOrNamespace path (SynModuleOrNamespace(_longIdent, _isRec, _isModule, synModuleDecls, _preXmlDoc, _synAttributes, _synAccessOpt, range) as mors) =
             match visitor.VisitModuleOrNamespace(mors) with

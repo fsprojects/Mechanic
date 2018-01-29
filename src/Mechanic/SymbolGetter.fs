@@ -23,8 +23,9 @@ let getSymbols file =
     let parseFileResults = parseSingleFile(file, input)
     let tree = parseFileResults.ParseTree.Value
 
-    let opens = AstSymbolCollector.getOpenDecls tree |> List.rev
-    let defSymbolNames = AstSymbolCollector.getDefSymbols tree |> set |> Set.toList
-    let usedSymbolNames = AstSymbolCollector.getUsedSymbols tree |> set |> Set.toList
+    let opens = AstSymbolCollector.getOpenDecls tree
+    let defSymbolNames = 
+        AstSymbolCollector.getDefSymbols tree |> set |> Set.toList 
+        |> List.filter (Utils.Namespace.lastPart >> (fun x -> x.StartsWith "op_") >> not)
 
-    file, defSymbolNames, opens, usedSymbolNames
+    file, defSymbolNames, opens

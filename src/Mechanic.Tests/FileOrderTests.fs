@@ -31,11 +31,11 @@ let makeTempProject sources =
 
 let expectOrder sources =
     let (_, _, files) = makeTempProject sources
-    Expect.equal (SymbolGraph.solveOrder files) (TopologicalOrder files) "Wrong order of files"
+    Expect.equal (SymbolGraph.solveOrder id files) (TopologicalOrder files) "Wrong order of files"
 
 let checkCycle sources =
     let (_, _, files) = makeTempProject sources
-    match SymbolGraph.solveOrder files with
+    match SymbolGraph.solveOrder id files with
     | Cycle _ -> true
     | _ -> false
 

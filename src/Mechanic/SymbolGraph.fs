@@ -56,15 +56,17 @@ let getDependencies files =
     //printfn "%A" deps
     deps
 
-let solveOrder files =
+let solveOrder fileNameSelector xs =
+    let filesMap = xs |> Seq.map (fun x -> fileNameSelector x, x) |> Map.ofSeq
+    let files = xs |> List.map fileNameSelector
     let deps = getDependencies files
     let edges = deps |> List.map (fun (f1,f2,_) -> f1, f2)
     match GraphAlg.topologicalOrder files edges with
     | TopologicalOrderResult.Cycle xs ->
         printfn "Cycle with %A" (deps |> List.filter (fun (x,y,_) -> List.contains x xs && List.contains y xs))
-        TopologicalOrderResult.Cycle xs
-    | x-> x
+        TopologicalOrderResult.Cycle (xs |> List.map (fun x -> filesMap.[x]))
+    | TopologicalOrderResult.TopologicalOrder xs -> TopologicalOrderResult.TopologicalOrder (xs |> List.map (fun x -> filesMap.[x]))
 
 let solveOrderFromPattern root filePattern =
     Directory.EnumerateFiles(root,filePattern) |> Seq.toList
-    |> solveOrder
+    |> solveOrder id

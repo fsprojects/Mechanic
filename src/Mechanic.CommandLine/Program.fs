@@ -1,14 +1,20 @@
 ﻿open Mechanic
 open Mechanic.Files
+open Mechanic.GraphAlg
+open Mechanic.Utils
 
 [<EntryPoint>]
 let main argv =
     match argv.Length with
     | 1 ->
-        ProjectFile.loadFromFile argv.[0]
-        |> ProjectFile.getSourceFiles
-        |> List.map (fun f -> f.FullName)
-        |> SymbolGraph.solveOrder
+        let p = ProjectFile.loadFromFile argv.[0]
+        p |> ProjectFile.getSourceFiles
+        |> SymbolGraph.solveOrder (fun f -> f.FullName)
+        |> function
+            |TopologicalOrderResult.TopologicalOrder xs ->
+                xs |> fun x -> ProjectFile.updateProjectFile x p 
+                TopologicalOrderResult.TopologicalOrder xs
+            |x -> x
         |> printfn "%A"
     | 2 ->
         let root = argv.[0]

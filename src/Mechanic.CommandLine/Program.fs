@@ -8,7 +8,6 @@ let main argv =
         ProjectFile.loadFromFile argv.[0]
         |> ProjectFile.getSourceFiles
         |> List.map (fun f -> f.FullName)
-        |> List.filter (fun x -> x.EndsWith ".fs")
         |> SymbolGraph.solveOrder
         |> printfn "%A"
     | 2 ->

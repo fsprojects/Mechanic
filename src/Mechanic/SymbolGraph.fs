@@ -3,7 +3,7 @@ open System.IO
 open Utils.Namespace
 
 let getDependencies files =
-    let depsData = files |> List.map SymbolGetter.getSymbols
+    let depsData = files |> List.map (fun (f: string) -> if f.EndsWith ".fs" then SymbolGetter.getSymbols f else f, [], [], [])
     let allDefsMap = 
         depsData |> Seq.collect (fun (f,defs,_,_) -> defs |> List.map (fun d -> lastPart d, (d, f)))
         |> Seq.groupBy fst |> Seq.map (fun (k, xs) -> k, xs |> Seq.map snd |> Seq.toList) |> Map.ofSeq

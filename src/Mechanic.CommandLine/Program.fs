@@ -11,10 +11,10 @@ let main argv =
         p |> ProjectFile.getSourceFiles
         |> SymbolGraph.solveOrder (fun f -> f.FullName)
         |> function
-            |TopologicalOrderResult.TopologicalOrder xs ->
+            | TopologicalOrderResult.TopologicalOrder xs ->
                 xs |> fun x -> ProjectFile.updateProjectFile x p 
-                TopologicalOrderResult.TopologicalOrder xs
-            |x -> x
+                TopologicalOrderResult.TopologicalOrder (xs |> List.map (fun f -> f.FullName))
+            | TopologicalOrderResult.Cycle xs -> TopologicalOrderResult.Cycle (xs |> List.map (fun f -> f.FullName))
         |> printfn "%A"
     | 2 ->
         let root = argv.[0]

@@ -89,7 +89,6 @@ module ProjectFile =
             match files with
             | [] -> parent
             | x::xs ->
-                //makeCompileNode x.ShortName doc
                 x.XmlNode |> parent.AppendChild |> ignore
                 addCompileNodes xs parent doc
 

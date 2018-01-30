@@ -13,7 +13,7 @@ type ProjectFile = {
 type SourceFile = {
     FullName : string
     ShortName : string
-    Xml : XmlNode
+    XmlNode : XmlNode
 }
 
 
@@ -75,7 +75,7 @@ module ProjectFile =
             let fi = FileInfo (Path.Combine(projectDir, x))
             { FullName  = fi.FullName
               ShortName = x 
-              Xml = xml})
+              XmlNode = xml})
 
     let makeNode tag (doc:XmlDocument) =
         doc.CreateElement tag
@@ -90,7 +90,7 @@ module ProjectFile =
             | [] -> parent
             | x::xs ->
                 //makeCompileNode x.ShortName doc
-                x.Xml |> parent.AppendChild |> ignore
+                x.XmlNode |> parent.AppendChild |> ignore
                 addCompileNodes xs parent doc
 
         let addNewItemGroup (sFiles:SourceFile list) (pf:ProjectFile) =

@@ -12,7 +12,8 @@ type ProjectFile = {
 
 type SourceFile = {
     FullName : string
-    ShortName : string 
+    ShortName : string
+    XmlNode : XmlNode
 }
 
 
@@ -63,16 +64,18 @@ module ProjectFile =
 
     let parseSourceFileNames (node:XmlNode) =
         getCompileGroup node
-        |> Option.map (getChildNodes >> (Seq.choose (getAttribute IncludeAttribute)))
-        |> Option.defaultValue Seq.empty<string>
+        |> Option.map (getChildNodes >> (Seq.choose (fun n -> getAttribute IncludeAttribute n |> Option.map (fun a -> n, a))))
+        |> Option.defaultValue Seq.empty
         |> List.ofSeq
 
     let getSourceFiles (pf:ProjectFile) =
+        let projectDir = FileInfo(pf.FileName).Directory.FullName
         parseSourceFileNames pf.ProjectNode
-        |> List.map (fun x ->
-            let fi = FileInfo x
+        |> List.map (fun (xml,x) ->
+            let fi = FileInfo (Path.Combine(projectDir, x))
             { FullName  = fi.FullName
-              ShortName = x })
+              ShortName = x 
+              XmlNode = xml})
 
     let makeNode tag (doc:XmlDocument) =
         doc.CreateElement tag
@@ -86,8 +89,7 @@ module ProjectFile =
             match files with
             | [] -> parent
             | x::xs ->
-                makeCompileNode x.ShortName doc
-                |> parent.AppendChild |> ignore
+                x.XmlNode |> parent.AppendChild |> ignore
                 addCompileNodes xs parent doc
 
         let addNewItemGroup (sFiles:SourceFile list) (pf:ProjectFile) =

@@ -41,16 +41,45 @@ let checkMinDist nodes edges =
     | _ ->
     let minOrder = variants |> List.minBy (editDistance nodes)
     let minDistance = editDistance nodes minOrder
-    printfn "%A" (minOrder, minDistance)
     match GraphAlg.topologicalOrder nodes edges with
     | TopologicalOrder order ->
         Expect.equal (editDistance nodes order) minDistance (sprintf "Not minimal edit distance: original %A result %A min dist %A" nodes order minOrder)
     | _ -> ()
 
+let checkMinDistSimpleEdit nodes edges =
+    let edges = edges |> List.filter (fun (v,w) -> v <> w)
+    match GraphAlg.topologicalOrder nodes edges with
+    | Cycle _ -> ()
+    | TopologicalOrder nodes ->
+    let n = nodes |> List.length
+    let variantsMoved x nodes = 
+        let xs = nodes |> List.filter ((<>)x)
+        if (List.length nodes = List.length xs) then [nodes]
+        else [0..n-1] |> List.map (fun i -> (List.take i xs) @ [x] @ (List.skip i xs))
+    let editDistance order1 order2 =
+        let rec f xs ys =
+            let orderPos1 = xs |> List.mapi (fun i v -> v, i) |> Map.ofList
+            match ys with
+            | [] -> 0
+            | (y::ys) -> orderPos1.[y] + f (xs |> List.filter ((<>)y)) ys
+        f order1 order2
+    let variants = variantsMoved 1 nodes
+    let variantsCorrect = variants |> List.filter (correctOrder edges)
+    match variants with
+    | [] -> ()
+    | _ ->
+    variants |> Seq.iter (fun xs ->
+        let minOrder = variantsCorrect |> List.minBy (editDistance xs)
+        let minDistance = editDistance xs minOrder
+        match GraphAlg.topologicalOrder xs edges with
+        | TopologicalOrder order ->
+            Expect.equal (editDistance xs order) minDistance (sprintf "Not minimal edit distance: original %A result %A min dist %A" xs order minOrder)
+        | _ -> ())
+
 [<Tests>]
  let tests =
     testList "GraphAlg" [
-        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 100; endSize = 50}) "Topological order alg - correctness" <| fun (Gen.RandomGraph(nodes, edges)) ->
+        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 100; endSize = 100}) "Topological order alg - correctness" <| fun (Gen.RandomGraph(nodes, edges)) ->
             let rec haveCycleAcc edges acc =
                 let (edgesFrom, edgesRemain) = edges |> List.partition (fun (v,_) -> Set.contains v acc)
                 match edgesFrom with
@@ -70,11 +99,14 @@ let checkMinDist nodes edges =
             | Cycle _ -> Expect.isTrue (haveCycle nodes edges) "Cycle reported on graph without cycle"
         
         // this test is really slow for bigger sizes, because it check all permutations of given size
-        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 1000; endSize = 7}) "Topological order alg - min edit distance" <| fun (Gen.RandomGraph(nodes, edges)) ->
+        ptestPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 100; endSize = 7}) "Topological order alg - min edit distance" <| fun (Gen.RandomGraph(nodes, edges)) ->
             checkMinDist nodes edges
 
+        testPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 100; endSize = 40}) "Topological order alg - min edit distance simple" <| fun (Gen.RandomGraph(nodes, edges)) ->
+            checkMinDistSimpleEdit nodes edges
+
         test "Topological order alg - min edit distance - unit test 1" {
-            checkMinDist [1..7] [7,1;1,2;2,3]
+            checkMinDist [1..7] [7,1; 1,2; 2,3]
         }
     ]
 

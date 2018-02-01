@@ -38,13 +38,6 @@ Actual implementation uses Map with the last part of the qualified identifier of
 Correct ordering of files is such that for each dependency `file1 -> file2`, `file1` is before `file2`.
 This directly translates to Topological order problem in oriented graphs: https://en.wikipedia.org/wiki/Topological_sort
 
-Kahn's algorithm mentioned on wiki is implemented with modifications to find ordering with minimal number of move operations:
+Kahn's algorithm mentioned on wiki is implemented with modifications to find ordering close to minimal number of *move up/down* operations (switching order of two neighbour elements):
 
-In each cycle, we add only one node to resulting ordered list; from set of nodes with no incoming edge, we select the one that comes first in original order.
-
-This alg outputs ordering that can be achieved by minimal number of *move up/down* operations (switching order of two neighbour elements).
-
-> *Side note (by @jindraivanek)*: If we choose different definition for edit distance as *sum of differences in node positions*, 
-> then above alg wouldn't work, and from my experiments with it, I think this is a hard (NP-complete) problem.
-
-Later, we need to find a way how to find ordering with minimal editing distance from original ordering.
+In each cycle, we add only one node to resulting ordered list; from set of nodes with no incoming edge, we select the one where following outgoing edges leads to the smallest position in original order.

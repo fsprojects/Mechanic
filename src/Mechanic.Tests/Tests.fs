@@ -98,6 +98,7 @@ let checkMinDistSimpleEdit nodes edges =
                 Expect.all edges (fun (v,w) -> orderPos.[v] <= orderPos.[w]) "Ordering must respect oriented edge"
             | Cycle _ -> Expect.isTrue (haveCycle nodes edges) "Cycle reported on graph without cycle"
         
+        // this test is ignored because our alg don't output min dist for all cases
         // this test is really slow for bigger sizes, because it check all permutations of given size
         ptestPropertyWithConfig (Gen.addToConfig {FsCheckConfig.defaultConfig with maxTest = 100; endSize = 7}) "Topological order alg - min edit distance" <| fun (Gen.RandomGraph(nodes, edges)) ->
             checkMinDist nodes edges

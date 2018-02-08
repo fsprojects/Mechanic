@@ -218,4 +218,14 @@ let expectDependency sources expectedDeps =
         """
             expectDependency [source1; source2; source3] [2,3]
         }
+
+        test "record type" {
+            let source1 = """module M
+            type R = { x: int }
+        """
+            let source2 = """module M2
+            let y = { x = 42 } : R
+        """
+            expectDependency [source1; source2] [1,2]
+        }
     ]

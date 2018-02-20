@@ -4,9 +4,20 @@ open Microsoft.FSharp.Compiler.Ast
 open Microsoft.FSharp.Compiler.SourceCodeServices.AstTraversal
 open Mechanic.Utils
 
+type Symbol =
+    | Identificator of string
+    | RecordField of string
+    | TypeSymbol of string
+module Symbol = 
+    let get x = match x with |Identificator s -> s |RecordField s -> s |TypeSymbol s -> s
+    let map f = function
+        | Identificator s -> Identificator (f s)
+        | RecordField s -> RecordField (f s)
+        | TypeSymbol s -> TypeSymbol (f s)
+
 type OpenDecl = { OpenName: string; Pos: Range.pos; Range: Range.range }
-type SymbolUse = { SymbolName: string; Range: Range.range }
-type OpenDeclGroup = { Opens: list<string>; UsedSymbols: list<string> }
+type SymbolUse = { SymbolName: Symbol; Range: Range.range }
+type OpenDeclGroup = { Opens: list<string>; UsedSymbols: list<Symbol> }
 
 let visitLongIdent (ident: LongIdent) =
     let names = String.concat "." [ for i in ident -> i.idText ]
@@ -36,9 +47,22 @@ let getDefSymbols (tree: ParsedInput) =
                 Some (visitLongIdent lId)
             | _ -> None
         ) |> List.rev |> String.concat "."
-    let visitor = { new AstVisitorBase<_>() with
-        //TODO: type defs
-        //TODO: record fields
+    let getTypeDefnFromPath path =
+        path |> List.rev |> List.choose (function
+            | TraverseStep.TypeDefn(t) -> Some t
+            | _ -> None
+        ) |> List.tryHead
+    let getFieldsFromTypeDefn (SynTypeDefn.TypeDefn(_,repr,_,_)) =
+        match repr with
+        | SynTypeDefnRepr.Simple(simpleRepr,_) ->
+            match simpleRepr with
+            | SynTypeDefnSimpleRepr.Record(_,fields,_) -> 
+                fields |> List.choose (function SynField.Field(_,_,ident,_type,_,_,_,_) -> ident |> Option.map (fun ident -> RecordField ident.idText))
+            | SynTypeDefnSimpleRepr.Union(_,cases,_) ->
+                cases |> List.map (function SynUnionCase.UnionCase(_,ident,_type,_,_,_) -> Identificator ident.idText)
+            | _ -> []
+        | _ -> []
+    let visitor = { new AstVisitorBase<_>() with    
         //TODO: union fields
         override __.VisitExpr(_, subExprF, defF, e) =
             match e with
@@ -47,7 +71,14 @@ let getDefSymbols (tree: ParsedInput) =
             match path with
             | TraverseStep.Expr _ :: _ -> defF x
             | _ ->
-                xs <- xs @ (getBind [x] |> List.map (fun s -> getNamespace path + "." + s)); defF x
+                xs <- xs @ (getBind [x] |> List.map (fun s -> getNamespace path + "." + s |> Identificator)); defF x
+        override __.VisitComponentInfo(path, _) =
+            let fields = path |> getTypeDefnFromPath |> Option.map getFieldsFromTypeDefn |> Option.defaultValue []
+            let symbolCons = 
+                path |> getTypeDefnFromPath |> function 
+                    | Some (SynTypeDefn.TypeDefn(_, SynTypeDefnRepr.ObjectModel _, _, _)) -> Identificator 
+                    | _ -> TypeSymbol
+            xs <- xs @ [getNamespace path |> symbolCons] @ (fields |> List.map (Symbol.map (fun s -> (getNamespace path |> Namespace.removeLastPart) + "." + s))); None
         }
     Traverse(tree, visitor) |> ignore
     xs
@@ -57,9 +88,18 @@ let getUsedSymbols (tree: ParsedInput) =
     let visitor = { new AstVisitorBase<_>() with
         override __.VisitExpr(path, subExprF, defF, e) =
             match e with
-            | SynExpr.Ident(id) -> xs <- (id.idText, id.idRange) :: xs; defF e
-            | SynExpr.LongIdent(_, LongIdentWithDots(lId,_), _, r) -> xs <- ((visitLongIdent lId), r) :: xs; defF e
+            | SynExpr.Ident(id) -> xs <- (Identificator id.idText, id.idRange) :: xs; defF e
+            | SynExpr.LongIdent(_, LongIdentWithDots(lId,_), _, r) -> xs <- (Identificator(visitLongIdent lId), r) :: xs; defF e
             | _ -> defF e
+        override __.VisitTyped(synType, range) =
+            match synType with
+            | SynType.LongIdent(LongIdentWithDots(lId, _)) -> xs <- (TypeSymbol(visitLongIdent lId), range) :: xs; None
+            | _ -> None
+        override __.VisitRecordField(_path, _, ident, range) =
+            printfn "record %A" (ident,range.StartLine,range.StartColumn,range.EndLine,range.EndColumn)
+            ident |> Option.iter (fun (LongIdentWithDots(ident, _)) ->
+                xs <- xs @ [RecordField(visitLongIdent ident), range])
+            None
         }
     Traverse(tree, visitor) |> ignore
     //printfn "Uses: %A" xs    
@@ -103,6 +143,6 @@ let getOpenDecls (tree: ParsedInput) =
         let openGroups = 
             usesWithOpens 
             |> List.groupBy snd |> List.map (fun (opens,g) -> mkOpenDecl (List.rev opens) (g |> List.map fst))
-        openGroups @ [opensWithNoUse |> List.map (fun (o,_) -> o.OpenName) |> fun x -> mkOpenDecl [] x]
+        openGroups @ [opensWithNoUse |> List.map (fun (o,_) -> o.OpenName) |> fun x -> mkOpenDecl x []]
     //printfn "Opens: %A" r
     r

@@ -60,6 +60,9 @@ module internal AstTraversal =
         /// VisitTypeAbbrev(ty,m), defaults to ignoring this leaf of the AST
         abstract VisitTypeAbbrev : SynType * range -> 'T option
         default this.VisitTypeAbbrev(_ty,_m) = None
+        
+        abstract VisitTyped : SynType * range -> 'T option
+        default this.VisitTyped(_ty,_m) = None
         /// VisitImplicitInherit(defaultTraverse,ty,expr,m), defaults to just visiting expr
         abstract VisitImplicitInherit : (SynExpr -> 'T option) * SynType * SynExpr * range -> 'T option
         default this.VisitImplicitInherit(defaultTraverse, _ty, expr, _m) = defaultTraverse expr
@@ -79,8 +82,8 @@ module internal AstTraversal =
         abstract VisitInterfaceSynMemberDefnType : SynType -> 'T option
         default this.VisitInterfaceSynMemberDefnType(_synType) = None
         /// VisitRecordField allows overriding behavior when visiting l.h.s. of constructed record instances
-        abstract VisitRecordField : TraversePath * SynExpr option * LongIdentWithDots option -> 'T option
-        default this.VisitRecordField (_path, _copyOpt, _recordField) = None
+        abstract VisitRecordField : TraversePath * SynExpr option * LongIdentWithDots option * range -> 'T option
+        default this.VisitRecordField (_path, _copyOpt, _recordField, _range) = None
         /// VisitHashDirective allows overriding behavior when visiting hash directives in FSX scripts, like #r, #load and #I.
         abstract VisitHashDirective : range -> 'T option
         default this.VisitHashDirective (_) = None
@@ -88,8 +91,8 @@ module internal AstTraversal =
         abstract VisitModuleOrNamespace : SynModuleOrNamespace -> 'T option
         default this.VisitModuleOrNamespace (_) = None
         /// VisitComponentInfo allows overriding behavior when visiting type component infos 
-        abstract VisitComponentInfo : SynComponentInfo -> 'T option
-        default this.VisitComponentInfo (_) = None
+        abstract VisitComponentInfo : TraversePath * SynComponentInfo -> 'T option
+        default this.VisitComponentInfo (_,_) = None
         /// VisitLetOrUse allows overriding behavior when visiting module or local let or use bindings
         abstract VisitLetOrUse : SynBinding list * range -> 'T option
         default this.VisitLetOrUse (_, _) = None
@@ -151,22 +154,22 @@ module internal AstTraversal =
                      dive synExpr2 synExpr2.Range traverseSynExpr]
                     |> pick expr
                 | SynExpr.Const(_synConst, _range) -> None
-                | SynExpr.Typed(synExpr, _synType, _range) -> traverseSynExpr synExpr
+                | SynExpr.Typed(synExpr, synType, range) -> visitor.VisitTyped(synType, range) |> ignore; traverseSynExpr synExpr
                 | SynExpr.Tuple(synExprList, _, _range) 
                 | SynExpr.StructTuple(synExprList, _, _range) -> synExprList |> List.map (fun x -> dive x x.Range traverseSynExpr) |> pick expr
                 | SynExpr.ArrayOrList(_, synExprList, _range) -> synExprList |> List.map (fun x -> dive x x.Range traverseSynExpr) |> pick expr
-                | SynExpr.Record(inheritOpt,copyOpt,fields, _range) -> 
+                | SynExpr.Record(inheritOpt,copyOpt,fields, range) -> 
                     [
                         let diveIntoSeparator offsideColumn scPosOpt copyOpt  = 
                             match scPosOpt with
                             | Some scPos -> 
                                 if posGeq pos scPos then 
-                                    visitor.VisitRecordField(path, copyOpt, None) // empty field after the inherits
+                                    visitor.VisitRecordField(path, copyOpt, None, range) // empty field after the inherits
                                 else None
                             | None -> 
                                 //semicolon position is not available - use offside rule
                                 if pos.Column = offsideColumn then
-                                    visitor.VisitRecordField(path, copyOpt, None) // empty field after the inherits
+                                    visitor.VisitRecordField(path, copyOpt, None, range) // empty field after the inherits
                                 else None
 
                         match inheritOpt with
@@ -177,7 +180,7 @@ module internal AstTraversal =
                                 // inherit A()
                                 // $
                                 if not (rangeContainsPos expr.Range pos) && sepOpt.IsNone && pos.Column = inheritRange.StartColumn then
-                                    visitor.VisitRecordField(path, None, None)
+                                    visitor.VisitRecordField(path, None, None, range)
                                 else
                                     traverseSynExpr expr
                                 )
@@ -199,14 +202,14 @@ module internal AstTraversal =
                                 if posGeq pos withRange.End then 
                                     // special case: caret is after WITH
                                     // { x with $ }
-                                    visitor.VisitRecordField (path, Some expr, None) 
+                                    visitor.VisitRecordField (path, Some expr, None, range) 
                                 else
                                     None
                             )
                         | _ -> ()
                         let copyOpt = Option.map fst copyOpt
                         for (field, _), e, sepOpt in fields do
-                            yield dive (path, copyOpt, Some field) field.Range (fun r -> 
+                            yield dive (path, copyOpt, Some field, range) field.Range (fun r -> 
                                 if rangeContainsPos field.Range pos then
                                     visitor.VisitRecordField r
                                 else 
@@ -223,7 +226,7 @@ module internal AstTraversal =
                                 // field x = 5
                                 // $
                                 if not (rangeContainsPos e.Range pos) && sepOpt.IsNone && pos.Column = offsideColumn then
-                                    visitor.VisitRecordField(path, copyOpt, None)
+                                    visitor.VisitRecordField(path, copyOpt, None, range)
                                 else
                                     traverseSynExpr expr
                                 )
@@ -278,7 +281,7 @@ module internal AstTraversal =
                      dive synExpr2 synExpr2.Range traverseSynExpr]
                     |> pick expr
                 | SynExpr.ArrayOrListOfSeqExpr(_, synExpr, _range) -> traverseSynExpr synExpr
-                | SynExpr.CompExpr(_, _, synExpr, _range) -> 
+                | SynExpr.CompExpr(_, _, synExpr, range) -> 
                     // now parser treats this syntactic expression as computation expression
                     // { identifier }
                     // here we detect this situation and treat CompExpr  { Identifier } as attempt to create record
@@ -289,8 +292,8 @@ module internal AstTraversal =
                         | _ -> false
                     let ok = 
                         match isPartOfArrayOrList, synExpr with
-                        | false, SynExpr.Ident ident -> visitor.VisitRecordField(path, None, Some (LongIdentWithDots([ident], [])))
-                        | false, SynExpr.LongIdent(false, lidwd, _, _) -> visitor.VisitRecordField(path, None, Some lidwd)
+                        | false, SynExpr.Ident ident -> visitor.VisitRecordField(path, None, Some (LongIdentWithDots([ident], [])), range)
+                        | false, SynExpr.LongIdent(false, lidwd, _, _) -> visitor.VisitRecordField(path, None, Some lidwd, range)
                         | _ -> None
                     if ok.IsSome then ok
                     else
@@ -453,7 +456,7 @@ module internal AstTraversal =
         and traverseSynTypeDefn path (SynTypeDefn.TypeDefn(synComponentInfo, synTypeDefnRepr, synMemberDefns, tRange) as tydef) =
             let path = TraverseStep.TypeDefn tydef :: path
             
-            match visitor.VisitComponentInfo synComponentInfo with
+            match visitor.VisitComponentInfo (path, synComponentInfo) with
             | Some x -> Some x
             | None ->
             [

@@ -219,13 +219,88 @@ let expectDependency sources expectedDeps =
             expectDependency [source1; source2; source3] [2,3]
         }
 
-        test "record type" {
+        test "record typed" {
             let source1 = """module M
             type R = { x: int }
         """
             let source2 = """module M2
+            open M
             let y = { x = 42 } : R
         """
             expectDependency [source1; source2] [1,2]
+        }
+
+        test "union typed" {
+            let source1 = """module M
+            type DU = A | B
+        """
+            let source2 = """module M2
+            open M
+            let y = A : DU
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "class type" {
+            let source1 = """module M
+            type C() = class end
+        """
+            let source2 = """module M2
+            open M
+            let y = C()
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "record field" {
+            let source1 = """module M
+            type R = { x: int }
+        """
+            let source2 = """module M2
+            open M
+            let y = { x = 42 }
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "union case" {
+            let source1 = """module M
+            type DU = A | B
+        """
+            let source2 = """module M2
+            open M
+            let y = A
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "let-type clash" {
+            let source1 = """module M
+            type DU = A | B
+        """
+            let source2 = """module M2
+            let DU = 42
+        """
+            let source3 = """module M3
+            open M
+            open M2
+            let y = A : DU
+        """
+            expectDependency [source1; source2; source3] [1,3]
+        }
+
+        test "let-field clash" {
+            let source1 = """module M
+            type R = { x: int }
+        """
+            let source2 = """module M2
+            let x = 42
+        """
+            let source3 = """module M3
+            open M
+            open M2
+            let y = x
+        """
+            expectDependency [source1; source2; source3] [2,3]
         }
     ]

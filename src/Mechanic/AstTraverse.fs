@@ -209,12 +209,7 @@ module internal AstTraversal =
                         | _ -> ()
                         let copyOpt = Option.map fst copyOpt
                         for (field, _), e, sepOpt in fields do
-                            yield dive (path, copyOpt, Some field, range) field.Range (fun r -> 
-                                if rangeContainsPos field.Range pos then
-                                    visitor.VisitRecordField r
-                                else 
-                                    None
-                                )
+                            yield dive (path, copyOpt, Some field, range) field.Range visitor.VisitRecordField
                             let offsideColumn = 
                                 match inheritOpt with
                                 | Some(_,_, _, _, inheritRange) -> inheritRange.StartColumn

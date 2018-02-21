@@ -96,7 +96,6 @@ let getUsedSymbols (tree: ParsedInput) =
             | SynType.LongIdent(LongIdentWithDots(lId, _)) -> xs <- (TypeSymbol(visitLongIdent lId), range) :: xs; None
             | _ -> None
         override __.VisitRecordField(_path, _, ident, range) =
-            printfn "record %A" (ident,range.StartLine,range.StartColumn,range.EndLine,range.EndColumn)
             ident |> Option.iter (fun (LongIdentWithDots(ident, _)) ->
                 xs <- xs @ [RecordField(visitLongIdent ident), range])
             None

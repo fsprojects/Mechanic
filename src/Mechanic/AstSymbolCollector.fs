@@ -81,6 +81,7 @@ let getDefSymbols (tree: ParsedInput) =
             xs <- xs @ [getNamespace path |> symbolCons] @ (fields |> List.map (Symbol.map (fun s -> (getNamespace path |> Namespace.removeLastPart) + "." + s))); None
         }
     Traverse(tree, visitor) |> ignore
+    //printfn "Defs: %A" xs    
     xs
 
 let getUsedSymbols (tree: ParsedInput) =
@@ -114,14 +115,20 @@ let getOpenDecls (tree: ParsedInput) =
             | TraverseStep.Module(SynModuleDecl.NestedModule(_,_,_,_,r)) -> Some r
             | _ -> None
         ) |> List.tryHead
+    let getNamespace path =
+        path |> List.choose (function
+            | TraverseStep.ModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,_,_,_)) -> if isModule then None else Some (visitLongIdent lId)
+            | _ -> None
+        ) |> List.tryHead
+    let openWithNamespace path x = getNamespace path |> Option.map (fun n -> Namespace.joinByDot [n; x]) |> Option.defaultValue x
     let mutable xs = []
     let visitor = { new AstVisitorBase<_>() with
         override __.VisitExpr(_, subExprF, defF, e) =
             match e with | _ -> defF e
         override __.VisitModuleDecl(path, defF, d) =
             match d with
-            | SynModuleDecl.Open(LongIdentWithDots(lId, _),r) -> xs <- ((visitLongIdent lId), r.Start, getScope path |> Option.get) :: xs; defF d
-            | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> xs <- ((visitLongIdent lId), r.Start, r) :: xs; defF d
+            | SynModuleDecl.Open(LongIdentWithDots(lId, _),r) -> xs <- ((visitLongIdent lId |> openWithNamespace path), r.Start, getScope path |> Option.get) :: xs; defF d
+            | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> xs <- ((visitLongIdent lId |> openWithNamespace path), r.Start, r) :: xs; defF d
             | _ -> defF d
         override __.VisitModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,_,_,r)) =
             let ident = visitLongIdent lId

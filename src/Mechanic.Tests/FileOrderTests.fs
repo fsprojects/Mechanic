@@ -219,6 +219,19 @@ let expectDependency sources expectedDeps =
             expectDependency [source1; source2; source3] [2,3]
         }
 
+        test "file order inner module namespace test 1" {
+            let source1 = """namespace N
+        module Test1 =
+            let x = 1
+        """
+            let source2 = """namespace N
+        module M1 =
+            open Test1
+            let y = x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
         test "record typed" {
             let source1 = """module M
             type R = { x: int }

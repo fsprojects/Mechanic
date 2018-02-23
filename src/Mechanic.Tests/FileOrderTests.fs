@@ -400,4 +400,19 @@ let expectDependency sources expectedDeps =
         """
             expectDependency [source1; source2; source3] [2,3]
         }
+
+        test "union private" {
+            let source1 = """module M
+            type DU = A | B
+        """
+            let source2 = """module M2
+            type DU = private A | B
+        """
+            let source3 = """module M3
+            open M
+            open M2
+            let y = A
+        """
+            expectDependency [source1; source2; source3] [1,3]
+        }
     ]

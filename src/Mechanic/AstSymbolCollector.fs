@@ -58,6 +58,7 @@ let getDefSymbols (tree: ParsedInput) =
             match simpleRepr with
             | SynTypeDefnSimpleRepr.Record(_,fields,_) -> 
                 fields |> List.choose (function SynField.Field(_,_,ident,_type,_,_,_,_) -> ident |> Option.map (fun ident -> RecordField ident.idText))
+            | SynTypeDefnSimpleRepr.Union(Some SynAccess.Private,_,_) -> []
             | SynTypeDefnSimpleRepr.Union(_,cases,_) ->
                 cases |> List.map (function SynUnionCase.UnionCase(_,ident,_type,_,_,_) -> Identificator ident.idText)
             | _ -> []

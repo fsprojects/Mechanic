@@ -117,10 +117,18 @@ let getOpenDecls (tree: ParsedInput) =
         ) |> List.tryHead
     let getNamespace path =
         path |> List.choose (function
-            | TraverseStep.ModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,_,_,_)) -> if isModule then None else Some (visitLongIdent lId)
+            | TraverseStep.ModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,_,_,_)) -> 
+                Some (if isModule then visitLongIdent lId |> Namespace.removeLastPart else visitLongIdent lId)
             | _ -> None
         ) |> List.tryHead
-    let openWithNamespace path x = getNamespace path |> Option.map (fun n -> Namespace.joinByDot [n; x]) |> Option.defaultValue x
+    let getFullNamespace path =
+        path |> List.choose (function
+            | TraverseStep.ModuleOrNamespace(SynModuleOrNamespace(lId,_,_,_,_,_,_,_))
+            | TraverseStep.Module(SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,_)) -> Some (visitLongIdent lId)
+            | _ -> None
+        ) |> List.rev |> Namespace.joinByDot
+    let openWithNamespace path x = getNamespace path |> Option.map (fun n -> Namespace.merge n x) |> Option.defaultValue x
+    let openWithFullNamespace path x = getFullNamespace path |> fun n -> Namespace.merge n x
     let mutable xs = []
     let visitor = { new AstVisitorBase<_>() with
         override __.VisitExpr(_, subExprF, defF, e) =
@@ -128,11 +136,11 @@ let getOpenDecls (tree: ParsedInput) =
         override __.VisitModuleDecl(path, defF, d) =
             match d with
             | SynModuleDecl.Open(LongIdentWithDots(lId, _),r) -> xs <- ((visitLongIdent lId |> openWithNamespace path), r.Start, getScope path |> Option.get) :: xs; defF d
-            | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> xs <- ((visitLongIdent lId |> openWithNamespace path), r.Start, r) :: xs; defF d
+            | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> xs <- (visitLongIdent lId |> openWithFullNamespace path, r.Start, r) :: xs; defF d
             | _ -> defF d
         override __.VisitModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,_,_,r)) =
             let ident = visitLongIdent lId
-            let ident = if isModule then Namespace.removeLastPart ident else ident 
+            if isModule then xs <- (Namespace.removeLastPart ident, r.Start, r) :: xs 
             xs <- (ident, r.Start, r) :: xs
             None
         }

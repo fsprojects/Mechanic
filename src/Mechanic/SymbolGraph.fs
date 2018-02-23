@@ -25,22 +25,16 @@ let getDependencies files =
         depsData |> List.collect (fun (f2, _, opens2, uses2) ->
             // Concat two list and merge same part on end of first list and start of second list.
             // Ex: merge ["A";"B";"C"] ["C";"D"] = ["A";"B";"C";"D"]
-            let rec merge l1 l2 =
-                let len1 = List.length l1
-                let len2 = List.length l2
-                let l = min len1 len2
-                [0..l] |> List.tryFind (fun i -> 
-                    let l1' = l1 |> List.skip i |> List.take (len1-i)
-                    let l2' = l2 |> List.take (len2-i)
-                    if l1' = [] || l2' = [] then false else Seq.forall2 (fun x y -> x = y) l1' l2')
-                |> Option.map (fun i -> l1 @ (List.skip (min len2 (len1-i)) l2))
-                |> Option.defaultValue (l1 @ l2)
-            let opensVariants symbol = ("" :: opens2) |> List.map (fun o -> symbol |> Symbol.map (fun s -> merge (splitByDot o) (splitByDot s) |> joinByDot))
+            
+            let opensVariants symbol = ("" :: opens2) |> List.map (fun o -> symbol |> Symbol.map (fun s -> merge o s))
             //printfn "%A" allDefsMap
             let tryFindDef s = 
                 allDefsMap |> Map.tryFind (Symbol.map lastPart s)
                 |> Option.bind (fun g -> 
-                    let r = opensVariants s |> List.tryPick (fun o -> g |> List.tryFind (fun (d,_) -> o = d))
+                    let r = 
+                        // try local definitions (from same file) first
+                        opensVariants s |> List.tryPick (fun o -> g |> List.tryFind (fun (d,f) -> o = d && f=f2))
+                        |> Option.orElseWith (fun () -> opensVariants s |> List.tryPick (fun o -> g |> List.tryFind (fun (d,_) -> o = d)))
                     match r with
                     | None -> 
                         //printfn "No match: %s -- %A -- %A" f2 (opensVariants s) g

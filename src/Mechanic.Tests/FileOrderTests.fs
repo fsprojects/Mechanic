@@ -232,6 +232,19 @@ let expectDependency sources expectedDeps =
             expectDependency [source1; source2] [1,2]
         }
 
+        test "file order inner module namespace test 2" {
+            let source1 = """module N.M1
+        module Test1 =
+            let x = 1
+        """
+            let source2 = """module N.M2
+        module Test2 =
+            open M1.Test1
+            let y = x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
         test "record typed" {
             let source1 = """module M
             type R = { x: int }
@@ -313,6 +326,77 @@ let expectDependency sources expectedDeps =
             open M
             open M2
             let y = x
+        """
+            expectDependency [source1; source2; source3] [2,3]
+        }
+
+        test "file order shadowing test 1" {
+            let source1 = """module N.M1
+        type R = { x: int }
+        """
+            let source2 = """module N.M2
+        type R = { x: int }
+        let y = {x=1}
+        """
+            expectDependency [source1; source2] []
+        }
+
+        test "file order shadowing test 2" {
+            let source1 = """namespace N
+        type R = { x: int }
+        """
+            let source2 = """namespace N
+        type R = { x: int }
+        let y = {x=1}
+        """
+            expectDependency [source1; source2] []
+        }
+
+        test "file order shadowing test 3" {
+            let source1 = """namespace N
+        type R = { x: int }
+        """
+            let source2 = """module N.M2
+        type R = { x: int }
+        let y = {x=1}
+        """
+            expectDependency [source1; source2] []
+        }
+
+        test "file order shadowing test 4" {
+            let source1 = """namespace N
+        type R = { x: int }
+        """
+            let source2 = """module N.M2
+        module M3 =        
+            type R = { x: int }
+            let y = {x=1}
+        """
+            expectDependency [source1; source2] []
+        }
+
+        test "file order shadowing test 5" {
+            let source1 = """module N.M1
+        type R = { x: int }
+        """
+            let source2 = """namespace N
+        open M1
+        type R = { x: int }
+        let y = {x=1}
+        """
+            expectDependency [source1; source2] []
+        }
+
+        test "file order shadowing test 6" {
+            let source1 = """namespace N
+        type R = { x: int }
+        """
+            let source2 = """module N.M2
+        type R = { x: int }
+        """
+            let source3 = """module N.M3
+        open N.M2
+        let y = {x=1}
         """
             expectDependency [source1; source2; source3] [2,3]
         }

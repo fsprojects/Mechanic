@@ -300,6 +300,105 @@ let expectDependency sources expectedDeps =
             expectDependency [source1; source2] [1,2]
         }
 
+        test "type in record" {
+            let source1 = """module M
+            type DU = A | B
+        """
+            let source2 = """module M2
+            open M
+            type R = { x: DU }
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "type in union" {
+            let source1 = """module M
+            type R = { x: DU }
+        """
+            let source2 = """module M2
+            open M
+            type DU = A of R | B
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "type in params" {
+            let source1 = """module M
+            type R = { x: DU }
+        """
+            let source2 = """module M2
+            open M
+            let f (r : R) = r.x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "type abbrev" {
+            let source1 = """module M
+            type R = { x: DU }
+        """
+            let source2 = """module M2
+            open M
+            let f r = (r : R).x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "type in class params" {
+            let source1 = """module M
+            type R = { x: DU }
+        """
+            let source2 = """module M2
+            open M
+            type C(r : R) = class end
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "type in record - tuple" {
+            let source1 = """module M
+            type DU = A | B
+        """
+            let source2 = """module M2
+            open M
+            type R = { x: DU * DU }
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "type in record - fun" {
+            let source1 = """module M
+            type DU = A | B
+        """
+            let source2 = """module M2
+            open M
+            type R = { x: DU -> () }
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "type in record - app" {
+            let source1 = """module M
+            type DU = A | B
+        """
+            let source2 = """module M2
+            open M
+            type R = { x: seq<DU> }
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+        
+        test "type in multi params" {
+            let source1 = """module M
+            type R = { x: DU }
+        """
+            let source2 = """module M2
+            open M
+            let f (r : R, r2 : R) = r.x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
         test "let-type clash" {
             let source1 = """module M
             type DU = A | B

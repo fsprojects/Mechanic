@@ -23,46 +23,97 @@ let visitLongIdent (ident: LongIdent) =
     let names = String.concat "." [ for i in ident -> i.idText ]
     names
 
-let visitPattern = function
-    | SynPat.Named(SynPat.Wild(_), name, _, _, _) -> Some name.idText
-    | SynPat.Named(_, name, _, _, _) -> Some name.idText
-    | SynPat.LongIdent(LongIdentWithDots(ident, _), _, _, _, _, _) -> Some <| visitLongIdent ident
-    | _ -> None
+let rec getTypes synType =
+    match synType with
+    | SynType.LongIdent(LongIdentWithDots(lId, _)) -> [TypeSymbol(visitLongIdent lId), lId |> List.map (fun x -> x.idRange) |> List.reduce Range.unionRanges]
+    | SynType.StructTuple(ps, _)
+    | SynType.Tuple (ps, _) -> ps |> List.map snd |> List.collect getTypes
+    | SynType.Array (_, t, _) -> getTypes t
+    | SynType.Fun (t1, t2, _) -> getTypes t1 @ getTypes t2
+    | SynType.App (t, _, ts, _, _, _, _)
+    | SynType.LongIdentApp (t, _, _, ts, _, _, _) -> (t :: ts) |> List.collect getTypes
+    | _ -> []
+
+let rec getSynConstructorArgs = function
+    | SynConstructorArgs.Pats ps -> ps |> List.collect visitPattern
+    | SynConstructorArgs.NamePatPairs (ps, _) -> ps |> List.map snd |> List.collect visitPattern
+
+and visitPattern = function
+    | SynPat.Named(SynPat.Wild(_), name, _, _, range) -> [Identificator name.idText, range]
+    | SynPat.OptionalVal(name, range)
+    | SynPat.Named(_, name, _, _, range) -> [Identificator name.idText, range]
+    | SynPat.LongIdent(LongIdentWithDots(ident, _), _, _, args, _, range) -> 
+        getSynConstructorArgs args @ [Identificator (visitLongIdent ident), range]
+    | SynPat.Typed(p, typ, _) -> visitPattern p @ getTypes typ
+    | SynPat.Paren(p, _) -> visitPattern p
+    | SynPat.Ands(ps, _)
+    | SynPat.ArrayOrList(_ , ps, _)
+    | SynPat.Tuple(ps, _) -> ps |> List.collect visitPattern
+    | SynPat.Or(p1, p2, _) -> visitPattern p1 @ visitPattern p2
+    | _ -> []
+
+let rec visitSimplePattern = function
+    | SynSimplePat.Id(ident, _, _, _, _, range) -> [Identificator ident.idText, range]
+    | SynSimplePat.Typed(p, typ, range) -> visitSimplePattern p @ getTypes typ
+    | _ -> []
+
 
 let rec getBind bindings =
-    bindings |> Seq.map (fun binding ->
+    bindings |> Seq.collect (fun binding ->
         let (Binding(_, _, _, _, _, _, _, pat, _, _, _, _)) = binding
         visitPattern pat)
-    |> Seq.choose id |> Seq.toList
+    |> Seq.toList
+
+
+let getFieldsAndTypesFromTypeDefn (SynTypeDefn.TypeDefn(SynComponentInfo.ComponentInfo _, repr,_,_)) =
+    match repr with
+    | SynTypeDefnRepr.Simple(simpleRepr,_) ->
+        match simpleRepr with
+        | SynTypeDefnSimpleRepr.Record(_,fields,_) -> 
+            fields |> List.collect (function 
+                SynField.Field(_,_,ident, synType,_,_,_, range) -> 
+                    (ident |> Option.toList |> List.map (fun ident -> RecordField ident.idText, range)) 
+                    @ (getTypes synType))
+        | SynTypeDefnSimpleRepr.Union(Some SynAccess.Private,_,_) -> []
+        | SynTypeDefnSimpleRepr.Union(_,cases,_) ->
+            cases |> List.collect (function 
+                SynUnionCase.UnionCase(_,ident,synUnionType,_,_,range) -> 
+                    let types =
+                        match synUnionType with
+                        | SynUnionCaseType.UnionCaseFullType(synType, _) -> getTypes synType
+                        | SynUnionCaseType.UnionCaseFields fields ->
+                            fields |> List.collect (function 
+                                SynField.Field(_,_,_, synType,_,_,_, _) -> getTypes synType)
+                    (Identificator ident.idText, range) :: types)
+        | _ -> []
+    | SynTypeDefnRepr.ObjectModel (_kind, members, _range) ->
+        members |> List.collect (function 
+        | SynMemberDefn.ImplicitCtor (_,_, args,_, _range) -> args |> List.collect (visitSimplePattern)
+        | _ -> [])
+    | _ -> []
+
+let getNamespace path =
+    path |> List.choose (function
+        | TraverseStep.ModuleOrNamespace(SynModuleOrNamespace(lId,_,_,_,_,_,_,_)) -> 
+            Some (visitLongIdent lId)
+        | TraverseStep.Module(SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,_)) -> 
+            Some (visitLongIdent lId)
+        | TraverseStep.TypeDefn(SynTypeDefn.TypeDefn(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_)) -> 
+            Some (visitLongIdent lId)
+        | _ -> None
+    ) |> List.rev |> String.concat "."
+let getTypeDefnFromPath path =
+    path |> List.rev |> List.choose (function
+        | TraverseStep.TypeDefn(t) -> Some t
+        | _ -> None
+    ) |> List.tryHead
 
 let getDefSymbols (tree: ParsedInput) =
     let mutable xs = []
-    let getNamespace path =
-        path |> List.choose (function
-            | TraverseStep.ModuleOrNamespace(SynModuleOrNamespace(lId,_,_,_,_,_,_,_)) -> 
-                Some (visitLongIdent lId)
-            | TraverseStep.Module(SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,_)) -> 
-                Some (visitLongIdent lId)
-            | TraverseStep.TypeDefn(SynTypeDefn.TypeDefn(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_)) -> 
-                Some (visitLongIdent lId)
-            | _ -> None
-        ) |> List.rev |> String.concat "."
-    let getTypeDefnFromPath path =
-        path |> List.rev |> List.choose (function
-            | TraverseStep.TypeDefn(t) -> Some t
-            | _ -> None
-        ) |> List.tryHead
-    let getFieldsFromTypeDefn (SynTypeDefn.TypeDefn(_,repr,_,_)) =
-        match repr with
-        | SynTypeDefnRepr.Simple(simpleRepr,_) ->
-            match simpleRepr with
-            | SynTypeDefnSimpleRepr.Record(_,fields,_) -> 
-                fields |> List.choose (function SynField.Field(_,_,ident,_type,_,_,_,_) -> ident |> Option.map (fun ident -> RecordField ident.idText))
-            | SynTypeDefnSimpleRepr.Union(Some SynAccess.Private,_,_) -> []
-            | SynTypeDefnSimpleRepr.Union(_,cases,_) ->
-                cases |> List.map (function SynUnionCase.UnionCase(_,ident,_type,_,_,_) -> Identificator ident.idText)
-            | _ -> []
-        | _ -> []
+    
+    let getFieldsFromTypeDefn = getFieldsAndTypesFromTypeDefn >> List.filter (function |TypeSymbol _, _ -> false |_ -> true) >> List.map fst
+    let getBind = getBind >> List.filter (function |TypeSymbol _, _ -> false |_ -> true) >> List.map fst
+    
     let visitor = { new AstVisitorBase<_>() with    
         //TODO: union fields
         override __.VisitExpr(_, subExprF, defF, e) =
@@ -72,7 +123,7 @@ let getDefSymbols (tree: ParsedInput) =
             match path with
             | TraverseStep.Expr _ :: _ -> defF x
             | _ ->
-                xs <- xs @ (getBind [x] |> List.map (fun s -> getNamespace path + "." + s |> Identificator)); defF x
+                xs <- xs @ (getBind [x] |> List.map (Symbol.map (fun x -> getNamespace path + "." + x))); defF x
         override __.VisitComponentInfo(path, _) =
             let fields = path |> getTypeDefnFromPath |> Option.map getFieldsFromTypeDefn |> Option.defaultValue []
             let symbolCons = 
@@ -86,6 +137,9 @@ let getDefSymbols (tree: ParsedInput) =
     xs
 
 let getUsedSymbols (tree: ParsedInput) =
+    let getTypesFromTypeDefn = getFieldsAndTypesFromTypeDefn >> List.filter (function |TypeSymbol _, _ -> true |_ -> false)
+    let getBind = getBind >> List.filter (function |TypeSymbol _, _ -> true |_ -> false)
+    
     let mutable xs = []
     let visitor = { new AstVisitorBase<_>() with
         override __.VisitExpr(path, subExprF, defF, e) =
@@ -93,14 +147,20 @@ let getUsedSymbols (tree: ParsedInput) =
             | SynExpr.Ident(id) -> xs <- (Identificator id.idText, id.idRange) :: xs; defF e
             | SynExpr.LongIdent(_, LongIdentWithDots(lId,_), _, r) -> xs <- (Identificator(visitLongIdent lId), r) :: xs; defF e
             | _ -> defF e
-        override __.VisitTyped(synType, range) =
-            match synType with
-            | SynType.LongIdent(LongIdentWithDots(lId, _)) -> xs <- (TypeSymbol(visitLongIdent lId), range) :: xs; None
-            | _ -> None
+        override __.VisitBinding(path, defF, x) = 
+            match path with
+            | TraverseStep.Expr _ :: _ -> defF x
+            | _ ->
+                xs <- xs @ (getBind [x]); defF x
+        override __.VisitType(synType, range) =
+            xs <- getTypes synType @ xs; None
         override __.VisitRecordField(_path, _, ident, range) =
             ident |> Option.iter (fun (LongIdentWithDots(ident, _)) ->
                 xs <- xs @ [RecordField(visitLongIdent ident), range])
             None
+        override __.VisitComponentInfo(path, _) =
+            let types = path |> getTypeDefnFromPath |> Option.map getTypesFromTypeDefn |> Option.defaultValue []
+            xs <- xs @ types; None
         }
     Traverse(tree, visitor) |> ignore
     //printfn "Uses: %A" xs    

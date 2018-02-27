@@ -16,11 +16,7 @@ open Microsoft.FSharp.Compiler.Ast
  
 
 /// A range of utility functions to assist with traversing an AST
-#if COMPILER_PUBLIC_API
 module AstTraversal =
-#else
-module internal AstTraversal =
-#endif
     // treat ranges as though they are half-open: [,)
     let rangeContainsPosLeftEdgeInclusive (m1:range) p =
         if posEq m1.Start m1.End then
@@ -61,8 +57,8 @@ module internal AstTraversal =
         abstract VisitTypeAbbrev : SynType * range -> 'T option
         default this.VisitTypeAbbrev(_ty,_m) = None
         
-        abstract VisitTyped : SynType * range -> 'T option
-        default this.VisitTyped(_ty,_m) = None
+        abstract VisitType : SynType * range -> 'T option
+        default this.VisitType(_ty,_m) = None
         /// VisitImplicitInherit(defaultTraverse,ty,expr,m), defaults to just visiting expr
         abstract VisitImplicitInherit : (SynExpr -> 'T option) * SynType * SynExpr * range -> 'T option
         default this.VisitImplicitInherit(defaultTraverse, _ty, expr, _m) = defaultTraverse expr
@@ -154,7 +150,7 @@ module internal AstTraversal =
                      dive synExpr2 synExpr2.Range traverseSynExpr]
                     |> pick expr
                 | SynExpr.Const(_synConst, _range) -> None
-                | SynExpr.Typed(synExpr, synType, range) -> visitor.VisitTyped(synType, range) |> ignore; traverseSynExpr synExpr
+                | SynExpr.Typed(synExpr, synType, range) -> visitor.VisitType(synType, range) |> ignore; traverseSynExpr synExpr
                 | SynExpr.Tuple(synExprList, _, _range) 
                 | SynExpr.StructTuple(synExprList, _, _range) -> synExprList |> List.map (fun x -> dive x x.Range traverseSynExpr) |> pick expr
                 | SynExpr.ArrayOrList(_, synExprList, _range) -> synExprList |> List.map (fun x -> dive x x.Range traverseSynExpr) |> pick expr
@@ -239,7 +235,9 @@ module internal AstTraversal =
                             | _ -> ()
 
                     ] |> pick expr
-                | SynExpr.New(_, _synType, synExpr, _range) -> traverseSynExpr synExpr
+                | SynExpr.New(_, synType, synExpr, range) -> 
+                    visitor.VisitType(synType, range) |> ignore
+                    traverseSynExpr synExpr
                 | SynExpr.ObjExpr(ty,baseCallOpt,binds,ifaces,_range1,_range2) -> 
                     let result = 
                         ifaces 
@@ -320,7 +318,9 @@ module internal AstTraversal =
                         [dive synExpr synExpr.Range traverseSynExpr
                          dive synExpr2 synExpr2.Range traverseSynExpr]
                         |> pick expr
-                | SynExpr.TypeApp(synExpr, _, _synTypeList, _commas, _, _, _range) -> traverseSynExpr synExpr
+                | SynExpr.TypeApp(synExpr, _, synTypeList, _commas, _, _, range) -> 
+                    synTypeList |> List.iter (fun t -> visitor.VisitType(t, range) |> ignore)
+                    traverseSynExpr synExpr
                 | SynExpr.LetOrUse(_, _, synBindingList, synExpr, range) -> 
                     match visitor.VisitLetOrUse(synBindingList, range) with
                     | Some x -> Some x
@@ -382,9 +382,11 @@ module internal AstTraversal =
                      dive synExpr2 synExpr2.Range traverseSynExpr
                      dive synExpr3 synExpr3.Range traverseSynExpr]
                     |> pick expr
-                | SynExpr.TypeTest(synExpr, _synType, _range) -> traverseSynExpr synExpr
-                | SynExpr.Upcast(synExpr, _synType, _range) -> traverseSynExpr synExpr
-                | SynExpr.Downcast(synExpr, _synType, _range) -> traverseSynExpr synExpr
+                | SynExpr.TypeTest(synExpr, synType, range)
+                | SynExpr.Upcast(synExpr, synType, range)
+                | SynExpr.Downcast(synExpr, synType, range) ->
+                    visitor.VisitType(synType, range) |> ignore
+                    traverseSynExpr synExpr
                 | SynExpr.InferredUpcast(synExpr, _range) -> traverseSynExpr synExpr
                 | SynExpr.InferredDowncast(synExpr, _range) -> traverseSynExpr synExpr
                 | SynExpr.Null(_range) -> None

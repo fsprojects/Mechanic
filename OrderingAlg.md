@@ -13,14 +13,20 @@ For each file, from untyped tree we collect three types of symbols:
 * symbol usage
 * open declarations, including "implicit" ones from module declaration and namespace declaration
 
+Symbol usage and open declarations are grouped together, so for each usage we have list of valid opens for that symbol.
+
+We divide symbol into these groups:
+* Identificator
+* Record field
+* Type
+
 For collecting, `AstTraverse` code was copied from https://github.com/fsharp/FSharp.Compiler.Service/blob/13ecd8d4d080465bce4f49de72e4c13c6005e842/src/fsharp/vs/ServiceParseTreeWalk.fs and altered to support going through the whole tree. 
 This allows us to traverse AST and cherry-pick only certain type of nodes.
 
 Symbols and opens are represented as simple strings.
 
 ### Current state
-* only `let` bindings are supported
-* inner module are not supported -- we will need to create group of open declarations and usages for each submodule
+* members are not supported
 
 ## From symbols, find dependencies between files
 

@@ -500,6 +500,27 @@ let expectDependency sources expectedDeps =
             expectDependency [source1; source2; source3] [2,3]
         }
 
+        test "class params shadowing" {
+            let source1 = """namespace N
+            let x = 42
+        """
+            let source2 = """namespace N
+            type C(x: int) =
+                let y = x
+        """
+            expectDependency [source1; source2] []
+        }
+
+        test "class params not def" {
+            let source1 = """namespace N
+            type C(x: int) = class end
+        """
+            let source2 = """namespace N
+            let y = x
+        """
+            expectDependency [source1; source2] []
+        }
+
         test "union private" {
             let source1 = """module M
             type DU = A | B
@@ -514,4 +535,6 @@ let expectDependency sources expectedDeps =
         """
             expectDependency [source1; source2; source3] [1,3]
         }
+
+        
     ]

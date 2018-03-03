@@ -16,6 +16,7 @@ module Symbol =
         | TypeSymbol s -> TypeSymbol (f s)
 
 type OpenDecl = { OpenName: string; Pos: Range.pos; Range: Range.range }
+type SymbolDef = { SymbolName: Symbol; LocalRange: Range.range option }
 type SymbolUse = { SymbolName: Symbol; Range: Range.range }
 type OpenDeclGroup = { Opens: list<string>; UsedSymbols: list<Symbol> }
 
@@ -54,7 +55,7 @@ and visitPattern = function
 
 let rec visitSimplePattern = function
     | SynSimplePat.Id(ident, _, _, _, _, range) -> [Identificator ident.idText, range]
-    | SynSimplePat.Typed(p, typ, range) -> visitSimplePattern p @ getTypes typ
+    | SynSimplePat.Typed(p, typ, _) -> visitSimplePattern p @ getTypes typ
     | _ -> []
 
 
@@ -88,7 +89,9 @@ let getFieldsAndTypesFromTypeDefn (SynTypeDefn.TypeDefn(SynComponentInfo.Compone
         | _ -> []
     | SynTypeDefnRepr.ObjectModel (_kind, members, _range) ->
         members |> List.collect (function 
-        | SynMemberDefn.ImplicitCtor (_,_, args,_, _range) -> args |> List.collect (visitSimplePattern)
+        | SynMemberDefn.ImplicitCtor (_,_, args,_, _range) -> 
+            args |> List.collect (visitSimplePattern)
+            |> List.filter (function |TypeSymbol _, _ -> true |_ -> false)
         | _ -> [])
     | _ -> []
 
@@ -115,7 +118,6 @@ let getDefSymbols (tree: ParsedInput) =
     let getBind = getBind >> List.filter (function |TypeSymbol _, _ -> false |_ -> true) >> List.map fst
     
     let visitor = { new AstVisitorBase<_>() with    
-        //TODO: union fields
         override __.VisitExpr(_, subExprF, defF, e) =
             match e with
             | _ -> defF e
@@ -123,18 +125,19 @@ let getDefSymbols (tree: ParsedInput) =
             match path with
             | TraverseStep.Expr _ :: _ -> defF x
             | _ ->
-                xs <- xs @ (getBind [x] |> List.map (Symbol.map (fun x -> getNamespace path + "." + x))); defF x
+                xs <- xs @ (getBind [x] |> List.map (Symbol.map (fun x -> getNamespace path + "." + x) >> fun x -> x, None)); defF x
         override __.VisitComponentInfo(path, _) =
             let fields = path |> getTypeDefnFromPath |> Option.map getFieldsFromTypeDefn |> Option.defaultValue []
-            let symbolCons = 
+            let symbolCons x = 
                 path |> getTypeDefnFromPath |> function 
-                    | Some (SynTypeDefn.TypeDefn(_, SynTypeDefnRepr.ObjectModel _, _, _)) -> Identificator 
-                    | _ -> TypeSymbol
-            xs <- xs @ [getNamespace path |> symbolCons] @ (fields |> List.map (Symbol.map (fun s -> (getNamespace path |> Namespace.removeLastPart) + "." + s))); None
+                    | Some (SynTypeDefn.TypeDefn(_, SynTypeDefnRepr.ObjectModel _, _, range)) -> Identificator x, Some range
+                    | _ -> TypeSymbol x, None
+            xs <- xs @ [getNamespace path |> symbolCons] 
+                @ (fields |> List.map (Symbol.map (fun s -> (getNamespace path |> Namespace.removeLastPart) + "." + s)  >> fun x -> x, None)); None
         }
     Traverse(tree, visitor) |> ignore
     //printfn "Defs: %A" xs    
-    xs
+    xs |> List.map (fun (x,r) -> { SymbolName = x; LocalRange = r })
 
 let getUsedSymbols (tree: ParsedInput) =
     let getTypesFromTypeDefn = getFieldsAndTypesFromTypeDefn >> List.filter (function |TypeSymbol _, _ -> true |_ -> false)
@@ -166,9 +169,13 @@ let getUsedSymbols (tree: ParsedInput) =
     //printfn "Uses: %A" xs    
     xs |> List.map (fun (x,r) -> {SymbolName = x; Range = r})
 
-let getOpenDecls (tree: ParsedInput) =
+let getOpenDecls (defs: SymbolDef list) (tree: ParsedInput) =
     //TODO: open in module with scope
-    let getUsesInRange range = getUsedSymbols tree |> List.filter (fun u -> Range.rangeContainsRange range u.Range);
+    let localDefs = defs |> List.choose (fun d -> d.LocalRange |> Option.map (fun r -> d.SymbolName, r))
+    let getUsesInRange range = 
+        getUsedSymbols tree |> List.filter (fun u -> 
+            Range.rangeContainsRange range u.Range
+            && not (localDefs |> List.exists (fun (s, r) -> u.SymbolName = s && Range.rangeContainsRange r u.Range)))
     let mkOpenDecl xs uses = { Opens = xs; UsedSymbols  = uses }
     let getScope path =
         path |> List.choose (function

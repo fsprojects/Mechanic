@@ -1,5 +1,6 @@
 module Mechanic.SymbolGetter
 open Microsoft.FSharp.Compiler.SourceCodeServices
+open Mechanic.AstSymbolCollector
 let checker = FSharpChecker.Create()
 
 let parseSingleFile (file, input) = 
@@ -26,6 +27,6 @@ let getSymbols file =
     let opens = AstSymbolCollector.getOpenDecls tree
     let defSymbolNames = 
         AstSymbolCollector.getDefSymbols tree |> set |> Set.toList 
-        |> List.filter (Utils.Namespace.lastPart >> (fun x -> x.StartsWith "op_") >> not)
+        |> List.filter (Symbol.get >> Utils.Namespace.lastPart >> (fun x -> x.StartsWith "op_") >> not)
 
     file, defSymbolNames, opens

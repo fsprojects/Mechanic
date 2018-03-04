@@ -1,0 +1,125 @@
+[17:17:50 INF] EXPECTO? Running tests... <Expecto>
+ImplFile
+  (ParsedImplFileInput
+     ("C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs",false,
+      QualifiedNameOfFile M,[],[],
+      [SynModuleOrNamespace
+         ([M],false,true,
+          [Types
+             ([TypeDefn
+                 (ComponentInfo
+                    ([],[],[],[R],
+                     PreXmlDoc
+                       (Microsoft.FSharp.Compiler.Range+pos,
+                        Microsoft.FSharp.Compiler.Ast+XmlDocCollector),false,
+                     None,
+                     C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs (2,17--2,18) IsSynthetic=false),
+                  Simple
+                    (Record
+                       (None,
+                        [Field
+                           ([],false,Some x,
+                            LongIdent (LongIdentWithDots ([DU],[])),false,
+                            PreXmlDoc
+                              (Microsoft.FSharp.Compiler.Range+pos,
+                               Microsoft.FSharp.Compiler.Ast+XmlDocCollector),
+                            None,
+                            C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs (2,23--2,28) IsSynthetic=false)],
+                        C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs (2,21--2,30) IsSynthetic=false),
+                     C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs (2,21--2,30) IsSynthetic=false),
+                  [],
+                  C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs (2,17--2,30) IsSynthetic=false)],
+              C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs (2,12--2,30) IsSynthetic=false)],
+          PreXmlDoc
+            (Microsoft.FSharp.Compiler.Range+pos,
+             Microsoft.FSharp.Compiler.Ast+XmlDocCollector),[],None,
+          C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs (1,0--2,30) IsSynthetic=false)],
+      (true, true)))
+Uses: [(TypeSymbol "DU",
+  C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs (2,23--2,28) IsSynthetic=false)]
+Uses: [(TypeSymbol "DU",
+  C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs (2,23--2,28) IsSynthetic=false)]
+Defs: [TypeSymbol "M.R"; RecordField "M.x"]
+ImplFile
+  (ParsedImplFileInput
+     ("C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs",false,
+      QualifiedNameOfFile M2,[],[],
+      [SynModuleOrNamespace
+         ([M2],false,true,
+          [Open
+             (LongIdentWithDots ([M],[]),
+              C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (2,17--2,18) IsSynthetic=false);
+           Let
+             (false,
+              [Binding
+                 (None,NormalBinding,false,false,[],
+                  PreXmlDoc
+                    (Microsoft.FSharp.Compiler.Range+pos,
+                     Microsoft.FSharp.Compiler.Ast+XmlDocCollector),
+                  SynValData
+                    (None,
+                     SynValInfo
+                       ([[SynArgInfo ([],false,Some r);
+                          SynArgInfo ([],false,Some r2)]],
+                        SynArgInfo ([],false,None)),None),
+                  LongIdent
+                    (LongIdentWithDots ([f],[]),None,None,
+                     Pats
+                       [Paren
+                          (Tuple
+                             ([Typed
+                                 (Named
+                                    (Wild
+                                       C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,19--3,20) IsSynthetic=false,
+                                     r,false,None,
+                                     C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,19--3,20) IsSynthetic=false),
+                                  LongIdent (LongIdentWithDots ([R],[])),
+                                  C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,19--3,24) IsSynthetic=false);
+                               Typed
+                                 (Named
+                                    (Wild
+                                       C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,26--3,28) IsSynthetic=false,
+                                     r2,false,None,
+                                     C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,26--3,28) IsSynthetic=false),
+                                  LongIdent (LongIdentWithDots ([R],[])),
+                                  C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,26--3,32) IsSynthetic=false)],
+                              C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,19--3,32) IsSynthetic=false),
+                           C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,18--3,33) IsSynthetic=false)],
+                     None,
+                     C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,16--3,33) IsSynthetic=false),
+                  None,
+                  LongIdent
+                    (false,
+                     LongIdentWithDots
+                       ([r; x],
+                        [C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,37--3,38) IsSynthetic=false]),
+                     None,
+                     C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,36--3,39) IsSynthetic=false),
+                  C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,16--3,33) IsSynthetic=false,
+                  SequencePointAtBinding
+                    C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,12--3,39) IsSynthetic=false)],
+              C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,12--3,39) IsSynthetic=false)],
+          PreXmlDoc
+            (Microsoft.FSharp.Compiler.Range+pos,
+             Microsoft.FSharp.Compiler.Ast+XmlDocCollector),[],None,
+          C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (1,0--3,39) IsSynthetic=false)],
+      (true, true)))
+Uses: [(Identificator "r.x",
+  C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,36--3,39) IsSynthetic=false)]
+Uses: [(Identificator "r.x",
+  C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,36--3,39) IsSynthetic=false)]
+Uses: [(Identificator "r.x",
+  C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs (3,36--3,39) IsSynthetic=false)]
+Defs: [Identificator "M2.f"]
+[17:17:52 ERR] FileOrder/type in multi params failed in 00:00:01.7290000. 
+Dependency differs.
+        Expected value was:
+        [0] ("C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs",
+ "C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs")
+        Actual value was:
+        
+      Sequence actual shorter than expected, at pos 0 for expected item ("C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile0.fs",
+ "C:\Users\Ikarni\AppData\Local\Temp\wshpejdv.afl\TestFile1.fs").
+  C:\dev\github\Mechanic\src\Mechanic.Tests\FileOrderTests.fs(377,1): Tests.FileOrder.tests@370-262.Invoke(Unit unitVar)
+ <Expecto>
+[17:17:52 INF] EXPECTO! 1 tests run in 00:00:01.8525150 - 0 passed, 0 ignored, 1 failed, 0 errored.  <Expecto>

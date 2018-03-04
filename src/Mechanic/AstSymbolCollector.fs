@@ -58,13 +58,11 @@ let rec visitSimplePattern = function
     | SynSimplePat.Typed(p, typ, _) -> visitSimplePattern p @ getTypes typ
     | _ -> []
 
-
 let rec getBind bindings =
     bindings |> Seq.collect (fun binding ->
         let (Binding(_, _, _, _, _, _, _, pat, _, _, _, _)) = binding
         visitPattern pat)
     |> Seq.toList
-
 
 let getFieldsAndTypesFromTypeDefn (SynTypeDefn.TypeDefn(SynComponentInfo.ComponentInfo _, repr,_,_)) =
     match repr with
@@ -91,7 +89,6 @@ let getFieldsAndTypesFromTypeDefn (SynTypeDefn.TypeDefn(SynComponentInfo.Compone
         members |> List.collect (function 
         | SynMemberDefn.ImplicitCtor (_,_, args,_, _range) -> 
             args |> List.collect (visitSimplePattern)
-            |> List.filter (function |TypeSymbol _, _ -> true |_ -> false)
         | _ -> [])
     | _ -> []
 
@@ -114,7 +111,7 @@ let getTypeDefnFromPath path =
 let getDefSymbols (tree: ParsedInput) =
     let mutable xs = []
     
-    let getFieldsFromTypeDefn = getFieldsAndTypesFromTypeDefn >> List.filter (function |TypeSymbol _, _ -> false |_ -> true) >> List.map fst
+    let getFieldsFromTypeDefn = getFieldsAndTypesFromTypeDefn >> List.filter (function |TypeSymbol _, _ -> false |_ -> true)
     let getBind = getBind >> List.filter (function |TypeSymbol _, _ -> false |_ -> true) >> List.map fst
     
     let visitor = { new AstVisitorBase<_>() with    
@@ -128,12 +125,18 @@ let getDefSymbols (tree: ParsedInput) =
                 xs <- xs @ (getBind [x] |> List.map (Symbol.map (fun x -> getNamespace path + "." + x) >> fun x -> x, None)); defF x
         override __.VisitComponentInfo(path, _) =
             let fields = path |> getTypeDefnFromPath |> Option.map getFieldsFromTypeDefn |> Option.defaultValue []
-            let symbolCons x = 
+            let localRange = 
                 path |> getTypeDefnFromPath |> function 
-                    | Some (SynTypeDefn.TypeDefn(_, SynTypeDefnRepr.ObjectModel _, _, range)) -> Identificator x, Some range
-                    | _ -> TypeSymbol x, None
-            xs <- xs @ [getNamespace path |> symbolCons] 
-                @ (fields |> List.map (Symbol.map (fun s -> (getNamespace path |> Namespace.removeLastPart) + "." + s)  >> fun x -> x, None)); None
+                    | Some (SynTypeDefn.TypeDefn(_, SynTypeDefnRepr.ObjectModel _, _, range)) -> Some range
+                    | _ -> None
+            let symbolCons = 
+                path |> getTypeDefnFromPath |> function 
+                    | Some (SynTypeDefn.TypeDefn(_, SynTypeDefnRepr.ObjectModel _, _, _)) -> Identificator
+                    | _ -> TypeSymbol
+            xs <- xs @ [getNamespace path |> symbolCons, None] 
+                @ (fields |> List.map (fun (x,r) -> 
+                    x |> Symbol.map (fun s -> (getNamespace path |> Namespace.removeLastPart) + "." + s)  
+                    |> fun x -> x, localRange)); None
         }
     Traverse(tree, visitor) |> ignore
     //printfn "Defs: %A" xs    
@@ -171,7 +174,7 @@ let getUsedSymbols (tree: ParsedInput) =
 
 let getOpenDecls (defs: SymbolDef list) (tree: ParsedInput) =
     //TODO: open in module with scope
-    let localDefs = defs |> List.choose (fun d -> d.LocalRange |> Option.map (fun r -> d.SymbolName, r))
+    let localDefs = defs |> List.choose (fun d -> d.LocalRange |> Option.map (fun r -> d.SymbolName |> Symbol.map Namespace.lastPart, r))
     let getUsesInRange range = 
         getUsedSymbols tree |> List.filter (fun u -> 
             Range.rangeContainsRange range u.Range

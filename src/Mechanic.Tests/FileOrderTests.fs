@@ -533,6 +533,45 @@ let expectDependency sources expectedDeps =
             expectDependency [source1; source2] []
         }
 
+        test "let in let shadowing" {
+            let source1 = """namespace N
+            let x = 42
+        """
+            let source2 = """namespace N
+            let y = 
+                let x = 42
+                x
+        """
+            expectDependency [source1; source2] []
+        }
+        
+        test "let in let limited scope" {
+            let source1 = """namespace N
+            let x = 42
+        """
+            let source2 = """namespace N
+            let y = 
+                let x = 42
+                x
+
+            let z = x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "let in let limited scope 2" {
+            let source1 = """namespace N
+            let x = 42
+        """
+            let source2 = """namespace N
+            let y = 
+                let w = x
+                let x = 42
+                x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
         test "let in let not def" {
             let source1 = """namespace N
             let y = 

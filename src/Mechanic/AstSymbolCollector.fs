@@ -132,17 +132,27 @@ let getTypeDefnFromPath path =
         | TraverseStep.TypeDefn(t) -> Some t
         | _ -> None
     ) |> List.tryHead
-let getRangeFromPath path =
-    path |> List.rev |> List.choose (function
-        | TraverseStep.Binding(t) -> Some t
-        | _ -> None
-    ) |> List.tryHead
+let getStepRange = function
+    | TraverseStep.ModuleOrNamespace m -> m.Range
+    | TraverseStep.Module m -> m.Range
+    | TraverseStep.TypeDefn d -> d.Range
+    | TraverseStep.Expr e -> e.Range
+    | TraverseStep.MatchClause c -> c.Range
+    | TraverseStep.Binding b -> b.RangeOfBindingAndRhs
+    | TraverseStep.MemberDefn m -> m.Range
+let getParentRangeFromPath path =
+    match path |> List.rev with
+    | [] 
+    | [_] -> None
+    | _::(x::_) -> 
+        Some (getStepRange x)
 
 let getBinding path localRange x =
     match path with
-        | TraverseStep.Expr _ :: _ -> []
-        | _ ->
-            getBind localRange [x]
+        | TraverseStep.Expr _ :: _ -> 
+            getParentRangeFromPath path |> Option.map (fun r -> 
+                getBind localRange [x] |> List.map (defToLocal <| Range.mkRange r.FileName x.RangeOfHeadPat.Start r.End)) |> Option.defaultValue []
+        | _ -> getBind localRange [x]
 
 let getDefSymbols (tree: ParsedInput) =
     let mutable xs = []

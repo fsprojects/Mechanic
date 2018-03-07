@@ -39,7 +39,7 @@ let mkUse symbol range = Use { SymbolName = symbol; Range = range }
 let filterDefs xs = xs |> List.choose (function | Def x -> Some x | Use _ -> None)
 let filterUses xs = xs |> List.choose (function | Use x -> Some x | Def _ -> None)
 
-type OpenDecl = { OpenName: string; Pos: Range.pos; Range: Range.range }
+type OpenDecl = { OpenName: string; Pos: Range.pos; Range: Range.range; IsAutoOpen: bool }
 type OpenDeclGroup = { Opens: list<string>; UsedSymbols: list<Symbol> }
 
 let visitLongIdent (ident: LongIdent) =
@@ -247,28 +247,35 @@ let getOpenDecls (defs: SymbolDef list) (tree: ParsedInput) =
             match e with | _ -> defF e
         override __.VisitModuleDecl(path, defF, d) =
             match d with
-            | SynModuleDecl.Open(LongIdentWithDots(lId, _),r) -> xs <- ((visitLongIdent lId |> openWithNamespace path), r.Start, getScope path |> Option.get) :: xs; defF d
-            | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> xs <- (visitLongIdent lId |> openWithFullNamespace path, r.Start, r) :: xs; defF d
+            | SynModuleDecl.Open(LongIdentWithDots(lId, _),r) -> 
+                xs <- { OpenName = visitLongIdent lId |> openWithNamespace path; Pos = r.Start; Range = getScope path |> Option.get; IsAutoOpen = false} :: xs
+                defF d
+            | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> 
+                xs <- { OpenName = visitLongIdent lId |> openWithFullNamespace path; Pos = r.Start; Range = r; IsAutoOpen = false } :: xs 
+                defF d
             | _ -> defF d
-        override __.VisitModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,_,_,r)) =
+        override __.VisitModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,attrs,_,r)) =
             let ident = visitLongIdent lId
-            if isModule then xs <- (Namespace.removeLastPart ident, r.Start, r) :: xs 
-            xs <- (ident, r.Start, r) :: xs
+            let isAutoOpen = attrs |> List.exists (fun  attr -> visitLongIdent attr.TypeName.Lid = "AutoOpen")
+            if isModule then xs <- { OpenName = Namespace.removeLastPart ident; Pos = r.Start; Range = r; IsAutoOpen = false } :: xs 
+            xs <- { OpenName = ident; Pos = r.Start; Range = r; IsAutoOpen = isAutoOpen } :: xs 
             None
         }
     Traverse(tree, visitor) |> ignore
-    let opensAndUses = xs |> List.map (fun (x, pos, openR) -> { OpenName = x; Pos = pos; Range = openR }, getUsesInRange openR)
+    let opensAndUses = xs |> List.map (fun x -> x, getUsesInRange x.Range)
     let opensWithNoUse = opensAndUses |> List.filter (fun (_,uses) -> List.isEmpty uses)
     let usesWithOpens =
         opensAndUses |> List.collect (fun (openD, uses) -> uses |> List.map (fun u -> u, openD))
         |> List.groupBy (fun (u,_) -> u.SymbolName, u.Range) |> List.map (fun ((u,_), xs) -> 
             let opensWithRange = xs |> List.map snd 
-            u, (opensWithRange |> List.sortBy (fun o -> o.Pos.Line, o.Pos.Column) |> List.map (fun o -> o.OpenName)))
+            u, (opensWithRange |> List.sortBy (fun o -> (if o.IsAutoOpen then 0 else 1), o.Pos.Line, o.Pos.Column) 
+                               |> List.map (fun o -> o.OpenName)))
     //printfn "UsesWithOpens: %A" usesWithOpens
     let r =
         let openGroups = 
             usesWithOpens 
             |> List.groupBy snd |> List.map (fun (opens,g) -> mkOpenDecl (List.rev opens) (g |> List.map fst))
         openGroups @ [opensWithNoUse |> List.map (fun (o,_) -> o.OpenName) |> fun x -> mkOpenDecl x []]
-    //printfn "Opens: %A" r
-    r
+    let autoOpens = xs |> List.filter (fun x -> x.IsAutoOpen) |> List.map (fun x -> x.OpenName)
+    //printfn "Opens: %A" (r, autoOpens)
+    r, autoOpens

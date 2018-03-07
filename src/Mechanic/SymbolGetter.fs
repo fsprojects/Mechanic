@@ -23,13 +23,13 @@ let getSymbols file =
     let input = System.IO.File.ReadAllText file 
     let parseFileResults = parseSingleFile(file, input)
     let tree = parseFileResults.ParseTree.Value
-    //printfn "%A" tree
+    // printfn "%A" tree
 
     let defs = AstSymbolCollector.getDefSymbols tree
-    let opens = AstSymbolCollector.getOpenDecls defs tree
+    let (opens, autoOpens) = AstSymbolCollector.getOpenDecls defs tree
     let defSymbolNames = 
         AstSymbolCollector.getDefSymbols tree |> List.choose (function { LocalRange = None; SymbolName = s } -> Some s | _ -> None)
         |> set |> Set.toList 
         |> List.filter (Symbol.get >> Utils.Namespace.lastPart >> (fun x -> x.StartsWith "op_") >> not)
 
-    file, defSymbolNames, opens
+    file, defSymbolNames, opens, autoOpens

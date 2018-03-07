@@ -609,5 +609,27 @@ let expectDependency sources expectedDeps =
             expectDependency [source1; source2; source3] [1,3]
         }
 
-        
+        test "autoopen" {
+            let source1 = """[<AutoOpen>]
+            module M
+            let x = 42
+        """
+            let source2 = """let y = x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "autoopen before explicit open" {
+            let source1 = """[<AutoOpen>]
+            module M
+            let x = 42
+        """
+            let source2 = """module M2
+            let x = "hello"
+        """
+            let source3 = """open M2
+                let y = x
+        """
+            expectDependency [source1; source2; source3] [2,3]
+        }
     ]

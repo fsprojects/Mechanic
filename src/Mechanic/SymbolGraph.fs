@@ -6,7 +6,9 @@ open Mechanic.GraphAlg
 open AstSymbolCollector
 
 let getDependencies files =
-    let depsData = files |> List.map (fun (f: string) -> if f.EndsWith ".fs" then SymbolGetter.getSymbols f else f, [], [])
+    let depsData = files |> List.map (fun (f: string) -> if f.EndsWith ".fs" then SymbolGetter.getSymbols f else f, [], [], [])
+    let autoOpens = depsData |> List.collect (fun (_,_,_,x) -> x)
+    let depsData = depsData |> List.map (fun (f,defs,opens,_) -> f, defs, opens |> List.map (fun g -> { g with Opens = g.Opens @ autoOpens }))
     let allDefsMap = 
         depsData |> Seq.collect (fun (f,defs,_) -> defs |> List.map (fun d -> Symbol.map lastPart d, (d, f)))
         |> Seq.groupBy fst |> Seq.map (fun (k, xs) -> k, xs |> Seq.map snd |> Seq.toList) |> Map.ofSeq

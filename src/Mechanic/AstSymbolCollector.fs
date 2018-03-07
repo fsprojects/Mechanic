@@ -15,8 +15,31 @@ module Symbol =
         | RecordField s -> RecordField (f s)
         | TypeSymbol s -> TypeSymbol (f s)
 
-type OpenDecl = { OpenName: string; Pos: Range.pos; Range: Range.range }
+type SymbolDef = { SymbolName: Symbol; LocalRange: Range.range option }
 type SymbolUse = { SymbolName: Symbol; Range: Range.range }
+
+type DefOrUse = 
+    | Def of SymbolDef 
+    | Use of SymbolUse
+module DefOrUse =
+    let map f = function
+        | Def s -> Def { s with SymbolName = Symbol.map f s.SymbolName}
+        | Use s -> Use { s with SymbolName = Symbol.map f s.SymbolName}
+
+let mkDef symbol = Def { SymbolName = symbol; LocalRange = None }
+let mkLocalDef symbol range = Def { SymbolName = symbol; LocalRange = Some range }
+let defToLocal range = function
+    | Def { SymbolName = s } -> Def { SymbolName = s; LocalRange = Some range }
+    | Use x -> Use x
+let defSetRange range = function
+    | Def { SymbolName = s } -> Def { SymbolName = s; LocalRange = range }
+    | Use x -> Use x
+let mkUse symbol range = Use { SymbolName = symbol; Range = range }
+
+let filterDefs xs = xs |> List.choose (function | Def x -> Some x | Use _ -> None)
+let filterUses xs = xs |> List.choose (function | Use x -> Some x | Def _ -> None)
+
+type OpenDecl = { OpenName: string; Pos: Range.pos; Range: Range.range }
 type OpenDeclGroup = { Opens: list<string>; UsedSymbols: list<Symbol> }
 
 let visitLongIdent (ident: LongIdent) =
@@ -33,62 +56,64 @@ let rec getTypes synType =
     | SynType.App (t, _, ts, _, _, _, _)
     | SynType.LongIdentApp (t, _, _, ts, _, _, _) -> (t :: ts) |> List.collect getTypes
     | _ -> []
+let getTypesUse synType = getTypes synType |> List.map (fun (x,r) -> mkUse x r)
+let getTypesDef synType = getTypes synType |> List.map (fun (x,_) -> mkDef x)
 
-let rec getSynConstructorArgs = function
-    | SynConstructorArgs.Pats ps -> ps |> List.collect visitPattern
-    | SynConstructorArgs.NamePatPairs (ps, _) -> ps |> List.map snd |> List.collect visitPattern
+let rec getSynConstructorArgs localRange = function
+    | SynConstructorArgs.Pats ps -> ps |> List.collect (visitPattern localRange)
+    | SynConstructorArgs.NamePatPairs (ps, _) -> ps |> List.map snd |> List.collect (visitPattern localRange)
 
-and visitPattern = function
-    | SynPat.Named(SynPat.Wild(_), name, _, _, range) -> [Identificator name.idText, range]
+and visitPattern localRange = function
+    | SynPat.Named(SynPat.Wild(_), name, _, _, range) -> [mkDef <| Identificator name.idText]
     | SynPat.OptionalVal(name, range)
-    | SynPat.Named(_, name, _, _, range) -> [Identificator name.idText, range]
+    | SynPat.Named(_, name, _, _, range) -> [mkDef <| Identificator name.idText]
     | SynPat.LongIdent(LongIdentWithDots(ident, _), _, _, args, _, range) -> 
-        getSynConstructorArgs args @ [Identificator (visitLongIdent ident), range]
-    | SynPat.Typed(p, typ, _) -> visitPattern p @ getTypes typ
-    | SynPat.Paren(p, _) -> visitPattern p
+        (getSynConstructorArgs localRange args |> List.map (defToLocal localRange))
+        @ [mkDef <| Identificator (visitLongIdent ident)]
+    | SynPat.Typed(p, typ, _) -> visitPattern localRange p @ getTypesUse typ
+    | SynPat.Paren(p, _) -> visitPattern localRange p
     | SynPat.Ands(ps, _)
     | SynPat.ArrayOrList(_ , ps, _)
-    | SynPat.Tuple(ps, _) -> ps |> List.collect visitPattern
-    | SynPat.Or(p1, p2, _) -> visitPattern p1 @ visitPattern p2
+    | SynPat.Tuple(ps, _) -> ps |> List.collect (visitPattern localRange)
+    | SynPat.Or(p1, p2, _) -> visitPattern localRange p1 @ visitPattern localRange p2
     | _ -> []
 
-let rec visitSimplePattern = function
-    | SynSimplePat.Id(ident, _, _, _, _, range) -> [Identificator ident.idText, range]
-    | SynSimplePat.Typed(p, typ, range) -> visitSimplePattern p @ getTypes typ
+let rec visitSimplePattern localRange = function
+    | SynSimplePat.Id(ident, _, _, _, _, range) -> [mkLocalDef (Identificator ident.idText) localRange]
+    | SynSimplePat.Typed(p, typ, _) -> visitSimplePattern localRange p @ getTypesUse typ
     | _ -> []
 
-
-let rec getBind bindings =
+let rec getBind localRange bindings =
     bindings |> Seq.collect (fun binding ->
         let (Binding(_, _, _, _, _, _, _, pat, _, _, _, _)) = binding
-        visitPattern pat)
+        visitPattern localRange pat)
     |> Seq.toList
 
-
-let getFieldsAndTypesFromTypeDefn (SynTypeDefn.TypeDefn(SynComponentInfo.ComponentInfo _, repr,_,_)) =
+let getSymbolsFromTypeDefn (SynTypeDefn.TypeDefn(SynComponentInfo.ComponentInfo _, repr,_,_)) =
     match repr with
     | SynTypeDefnRepr.Simple(simpleRepr,_) ->
         match simpleRepr with
         | SynTypeDefnSimpleRepr.Record(_,fields,_) -> 
             fields |> List.collect (function 
                 SynField.Field(_,_,ident, synType,_,_,_, range) -> 
-                    (ident |> Option.toList |> List.map (fun ident -> RecordField ident.idText, range)) 
-                    @ (getTypes synType))
+                    (ident |> Option.toList |> List.map (fun ident -> mkDef (RecordField ident.idText))) 
+                    @ (getTypesUse synType))
         | SynTypeDefnSimpleRepr.Union(Some SynAccess.Private,_,_) -> []
         | SynTypeDefnSimpleRepr.Union(_,cases,_) ->
             cases |> List.collect (function 
                 SynUnionCase.UnionCase(_,ident,synUnionType,_,_,range) -> 
                     let types =
                         match synUnionType with
-                        | SynUnionCaseType.UnionCaseFullType(synType, _) -> getTypes synType
+                        | SynUnionCaseType.UnionCaseFullType(synType, _) -> getTypesUse synType
                         | SynUnionCaseType.UnionCaseFields fields ->
                             fields |> List.collect (function 
-                                SynField.Field(_,_,_, synType,_,_,_, _) -> getTypes synType)
-                    (Identificator ident.idText, range) :: types)
+                                SynField.Field(_,_,_, synType,_,_,_, _) -> getTypesUse synType)
+                    mkDef (Identificator ident.idText) :: types)
         | _ -> []
     | SynTypeDefnRepr.ObjectModel (_kind, members, _range) ->
         members |> List.collect (function 
-        | SynMemberDefn.ImplicitCtor (_,_, args,_, _range) -> args |> List.collect (visitSimplePattern)
+        | SynMemberDefn.ImplicitCtor (_,_, args,_, range) -> 
+            args |> List.collect (visitSimplePattern range)
         | _ -> [])
     | _ -> []
 
@@ -107,68 +132,94 @@ let getTypeDefnFromPath path =
         | TraverseStep.TypeDefn(t) -> Some t
         | _ -> None
     ) |> List.tryHead
+let getStepRange = function
+    | TraverseStep.ModuleOrNamespace m -> m.Range
+    | TraverseStep.Module m -> m.Range
+    | TraverseStep.TypeDefn d -> d.Range
+    | TraverseStep.Expr e -> e.Range
+    | TraverseStep.MatchClause c -> c.Range
+    | TraverseStep.Binding b -> b.RangeOfBindingAndRhs
+    | TraverseStep.MemberDefn m -> m.Range
+let getParentRangeFromPath path =
+    match path |> List.rev with
+    | [] 
+    | [_] -> None
+    | _::(x::_) -> 
+        Some (getStepRange x)
+
+let getBinding path localRange x =
+    match path with
+        | TraverseStep.Expr _ :: _ -> 
+            getParentRangeFromPath path |> Option.map (fun r -> 
+                getBind localRange [x] |> List.map (defToLocal <| Range.mkRange r.FileName x.RangeOfHeadPat.Start r.End)) |> Option.defaultValue []
+        | _ -> getBind localRange [x]
 
 let getDefSymbols (tree: ParsedInput) =
     let mutable xs = []
     
-    let getFieldsFromTypeDefn = getFieldsAndTypesFromTypeDefn >> List.filter (function |TypeSymbol _, _ -> false |_ -> true) >> List.map fst
-    let getBind = getBind >> List.filter (function |TypeSymbol _, _ -> false |_ -> true) >> List.map fst
-    
     let visitor = { new AstVisitorBase<_>() with    
-        //TODO: union fields
         override __.VisitExpr(_, subExprF, defF, e) =
             match e with
             | _ -> defF e
-        override __.VisitBinding(path, defF, x) = 
-            match path with
-            | TraverseStep.Expr _ :: _ -> defF x
-            | _ ->
-                xs <- xs @ (getBind [x] |> List.map (Symbol.map (fun x -> getNamespace path + "." + x))); defF x
+        
+        override __.VisitLetOrUse(path, bindings, range) = 
+            xs <- xs @ (bindings |> List.collect (getBinding path range >> List.map (DefOrUse.map (fun x -> getNamespace path + "." + x))))
+            None
+            
         override __.VisitComponentInfo(path, _) =
-            let fields = path |> getTypeDefnFromPath |> Option.map getFieldsFromTypeDefn |> Option.defaultValue []
+            let fields = path |> getTypeDefnFromPath |> Option.map getSymbolsFromTypeDefn |> Option.defaultValue []
+            let localRange = 
+                path |> getTypeDefnFromPath |> function 
+                    | Some (SynTypeDefn.TypeDefn(_, SynTypeDefnRepr.ObjectModel _, _, range)) -> Some range
+                    | _ -> None
             let symbolCons = 
                 path |> getTypeDefnFromPath |> function 
-                    | Some (SynTypeDefn.TypeDefn(_, SynTypeDefnRepr.ObjectModel _, _, _)) -> Identificator 
+                    | Some (SynTypeDefn.TypeDefn(_, SynTypeDefnRepr.ObjectModel _, _, _)) -> Identificator
                     | _ -> TypeSymbol
-            xs <- xs @ [getNamespace path |> symbolCons] @ (fields |> List.map (Symbol.map (fun s -> (getNamespace path |> Namespace.removeLastPart) + "." + s))); None
+            xs <- xs @ [getNamespace path |> symbolCons |> mkDef] 
+                @ (fields |> List.map ( 
+                    DefOrUse.map (fun s -> (getNamespace path |> Namespace.removeLastPart) + "." + s)  
+                    >> defSetRange localRange))
+            None
         }
     Traverse(tree, visitor) |> ignore
-    //printfn "Defs: %A" xs    
-    xs
+    let defs = xs |> filterDefs
+    //printfn "Defs: %A" defs
+    defs
 
 let getUsedSymbols (tree: ParsedInput) =
-    let getTypesFromTypeDefn = getFieldsAndTypesFromTypeDefn >> List.filter (function |TypeSymbol _, _ -> true |_ -> false)
-    let getBind = getBind >> List.filter (function |TypeSymbol _, _ -> true |_ -> false)
-    
     let mutable xs = []
     let visitor = { new AstVisitorBase<_>() with
         override __.VisitExpr(path, subExprF, defF, e) =
             match e with
-            | SynExpr.Ident(id) -> xs <- (Identificator id.idText, id.idRange) :: xs; defF e
-            | SynExpr.LongIdent(_, LongIdentWithDots(lId,_), _, r) -> xs <- (Identificator(visitLongIdent lId), r) :: xs; defF e
+            | SynExpr.Ident(id) -> xs <- mkUse (Identificator id.idText) id.idRange :: xs; defF e
+            | SynExpr.LongIdent(_, LongIdentWithDots(lId,_), _, r) -> xs <- mkUse (Identificator(visitLongIdent lId)) r :: xs; defF e
             | _ -> defF e
-        override __.VisitBinding(path, defF, x) = 
-            match path with
-            | TraverseStep.Expr _ :: _ -> defF x
-            | _ ->
-                xs <- xs @ (getBind [x]); defF x
+        override __.VisitLetOrUse(path, bindings, range) = 
+            xs <- xs @ (bindings |> List.collect (getBinding path range))
+            None
         override __.VisitType(synType, range) =
-            xs <- getTypes synType @ xs; None
+            xs <- getTypesUse synType @ xs; None
         override __.VisitRecordField(_path, _, ident, range) =
             ident |> Option.iter (fun (LongIdentWithDots(ident, _)) ->
-                xs <- xs @ [RecordField(visitLongIdent ident), range])
+                xs <- xs @ [mkUse (RecordField(visitLongIdent ident)) range])
             None
         override __.VisitComponentInfo(path, _) =
-            let types = path |> getTypeDefnFromPath |> Option.map getTypesFromTypeDefn |> Option.defaultValue []
+            let types = path |> getTypeDefnFromPath |> Option.map getSymbolsFromTypeDefn |> Option.defaultValue []
             xs <- xs @ types; None
         }
     Traverse(tree, visitor) |> ignore
-    //printfn "Uses: %A" xs    
-    xs |> List.map (fun (x,r) -> {SymbolName = x; Range = r})
+    let uses = xs |> filterUses
+    //printfn "Uses: %A" uses
+    uses
 
-let getOpenDecls (tree: ParsedInput) =
+let getOpenDecls (defs: SymbolDef list) (tree: ParsedInput) =
     //TODO: open in module with scope
-    let getUsesInRange range = getUsedSymbols tree |> List.filter (fun u -> Range.rangeContainsRange range u.Range);
+    let localDefs = defs |> List.choose (fun d -> d.LocalRange |> Option.map (fun r -> d.SymbolName |> Symbol.map Namespace.lastPart, r))
+    let getUsesInRange range = 
+        getUsedSymbols tree |> List.filter (fun u -> 
+            Range.rangeContainsRange range u.Range
+            && not (localDefs |> List.exists (fun (s, r) -> u.SymbolName = s && Range.rangeContainsRange r u.Range)))
     let mkOpenDecl xs uses = { Opens = xs; UsedSymbols  = uses }
     let getScope path =
         path |> List.choose (function

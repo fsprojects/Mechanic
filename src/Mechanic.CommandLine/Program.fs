@@ -7,6 +7,8 @@ open Mechanic.Utils
 let main argv =
     match argv.Length with
     | 1 ->
+        SymbolGetter.getExternalDefs (argv.[0])
+        exit 0
         let p = ProjectFile.loadFromFile argv.[0]
         p |> ProjectFile.getSourceFiles
         |> SymbolGraph.solveOrder (fun f -> f.FullName)
@@ -21,4 +23,5 @@ let main argv =
         let pattern = argv.[1]
         SymbolGraph.solveOrderFromPattern root pattern 
         |> printfn "%A"
+    | _ -> ()
     0

@@ -40,7 +40,7 @@ let filterDefs xs = xs |> List.choose (function | Def x -> Some x | Use _ -> Non
 let filterUses xs = xs |> List.choose (function | Use x -> Some x | Def _ -> None)
 
 type OpenDecl = { OpenName: string; Pos: Range.pos; Range: Range.range; IsAutoOpen: bool }
-type OpenDeclGroup = { Opens: list<string>; UsedSymbols: list<Symbol> }
+type OpenDeclGroup = { Opens: list<OpenDecl>; UsedSymbols: list<Symbol> }
 
 let visitLongIdent (ident: LongIdent) =
     let names = String.concat "." [ for i in ident -> i.idText ]
@@ -268,14 +268,13 @@ let getOpenDecls (defs: SymbolDef list) (tree: ParsedInput) =
         opensAndUses |> List.collect (fun (openD, uses) -> uses |> List.map (fun u -> u, openD))
         |> List.groupBy (fun (u,_) -> u.SymbolName, u.Range) |> List.map (fun ((u,_), xs) -> 
             let opensWithRange = xs |> List.map snd 
-            u, (opensWithRange |> List.sortBy (fun o -> (if o.IsAutoOpen then 0 else 1), o.Pos.Line, o.Pos.Column) 
-                               |> List.map (fun o -> o.OpenName)))
+            u, (opensWithRange |> List.sortBy (fun o -> (if o.IsAutoOpen then 0 else 1), o.Pos.Line, o.Pos.Column)))
     //printfn "UsesWithOpens: %A" usesWithOpens
     let r =
         let openGroups = 
             usesWithOpens 
             |> List.groupBy snd |> List.map (fun (opens,g) -> mkOpenDecl (List.rev opens) (g |> List.map fst))
-        openGroups @ [opensWithNoUse |> List.map (fun (o,_) -> o.OpenName) |> fun x -> mkOpenDecl x []]
-    let autoOpens = xs |> List.filter (fun x -> x.IsAutoOpen) |> List.map (fun x -> x.OpenName)
+        openGroups @ [opensWithNoUse |> List.map fst |> fun x -> mkOpenDecl x []]
+    //let autoOpens = xs |> List.filter (fun x -> x.IsAutoOpen) |> List.map (fun x -> x.OpenName)
     //printfn "Opens: %A" (r, autoOpens)
-    r, autoOpens
+    r

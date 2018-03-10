@@ -26,10 +26,10 @@ let getSymbols file =
     // printfn "%A" tree
 
     let defs = AstSymbolCollector.getDefSymbols tree
-    let (opens, autoOpens) = AstSymbolCollector.getOpenDecls defs tree
+    let opens = AstSymbolCollector.getOpenDecls defs tree
     let defSymbolNames = 
         AstSymbolCollector.getDefSymbols tree |> List.choose (function { LocalRange = None; SymbolName = s } -> Some s | _ -> None)
         |> set |> Set.toList 
         |> List.filter (Symbol.get >> Utils.Namespace.lastPart >> (fun x -> x.StartsWith "op_") >> not)
 
-    file, defSymbolNames, opens, autoOpens
+    file, defSymbolNames, opens

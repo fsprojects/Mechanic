@@ -619,7 +619,7 @@ let expectDependency sources expectedDeps =
             expectDependency [source1; source2] [1,2]
         }
 
-        test "autoopen before explicit open" {
+        test "explicit open before autoopen" {
             let source1 = """[<AutoOpen>]
             module M
             let x = 42

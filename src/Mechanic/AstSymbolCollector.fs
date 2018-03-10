@@ -156,6 +156,9 @@ let getBinding path localRange x =
 
 let getDefSymbols (tree: ParsedInput) =
     let mutable xs = []
+
+    let withNamespace path x = x |> DefOrUse.map (fun s -> getNamespace path + "." + s)
+    let withNamespaceExceptLastPart path x = x |> DefOrUse.map (fun s -> (getNamespace path |> Namespace.removeLastPart) + "." + s)
     
     let visitor = { new AstVisitorBase<_>() with    
         override __.VisitExpr(_, subExprF, defF, e) =
@@ -163,7 +166,7 @@ let getDefSymbols (tree: ParsedInput) =
             | _ -> defF e
         
         override __.VisitLetOrUse(path, bindings, range) = 
-            xs <- xs @ (bindings |> List.collect (getBinding path range >> List.map (DefOrUse.map (fun x -> getNamespace path + "." + x))))
+            xs <- xs @ (bindings |> List.collect (fun x -> x |> getBinding path range |> List.map (withNamespace path)))
             None
             
         override __.VisitComponentInfo(path, _) =
@@ -176,10 +179,9 @@ let getDefSymbols (tree: ParsedInput) =
                 path |> getTypeDefnFromPath |> function 
                     | Some (SynTypeDefn.TypeDefn(_, SynTypeDefnRepr.ObjectModel _, _, _)) -> Identificator
                     | _ -> TypeSymbol
-            xs <- xs @ [getNamespace path |> symbolCons |> mkDef] 
-                @ (fields |> List.map ( 
-                    DefOrUse.map (fun s -> (getNamespace path |> Namespace.removeLastPart) + "." + s)  
-                    >> defSetRange localRange))
+            let typeDef = getNamespace path |> symbolCons |> mkDef
+
+            xs <- xs @ [typeDef] @ (fields |> List.map (fun field -> field |> withNamespaceExceptLastPart path |> defSetRange localRange))
             None
         }
     Traverse(tree, visitor) |> ignore

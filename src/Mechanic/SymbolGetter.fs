@@ -26,7 +26,7 @@ let getSymbols file =
     let input = System.IO.File.ReadAllText file 
     let parseFileResults = parseSingleFile(file, input)
     let tree = parseFileResults.ParseTree.Value
-    //printfn "%A" tree
+    // printfn "%A" tree
 
     let defs = AstSymbolCollector.getDefSymbols tree
     let opens = AstSymbolCollector.getOpenDecls defs tree

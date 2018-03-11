@@ -7,6 +7,8 @@ open AstSymbolCollector
 
 let getDependencies files =
     let depsData = files |> List.map (fun (f: string) -> if f.EndsWith ".fs" then SymbolGetter.getSymbols f else f, [], [])
+    let autoOpens = depsData |> List.collect (fun (_,_,g) -> g |> List.collect (fun x -> x.Opens |> List.filter (fun o -> o.IsAutoOpen)))
+    let depsData = depsData |> List.map (fun (f,defs,opens) -> f, defs, opens |> List.map (fun g -> { g with Opens = g.Opens @ autoOpens }))
     let allDefsMap = 
         depsData |> Seq.collect (fun (f,defs,_) -> defs |> List.map (fun d -> Symbol.map lastPart d, (d, f)))
         |> Seq.groupBy fst |> Seq.map (fun (k, xs) -> k, xs |> Seq.map snd |> Seq.toList) |> Map.ofSeq
@@ -14,7 +16,9 @@ let getDependencies files =
         depsData |> List.map (fun (f,defs,opens) -> 
             f, defs, opens |> List.map (fun o -> 
                 { o with UsedSymbols = o.UsedSymbols |> List.filter (fun u -> allDefsMap |> Map.containsKey (Symbol.map lastPart u)) } ))
-        |> List.collect (fun (f2, defs2, opens2) -> opens2 |> List.map (fun o -> f2, defs2, o.Opens, o.UsedSymbols))
+        |> List.collect (fun (f2, defs2, opens2) -> 
+            opens2 |> List.map (fun o -> 
+                f2, defs2, o.Opens |> List.map (fun x -> x.OpenName), o.UsedSymbols))
     // depsData |> Seq.iter (fun (f,defs,opens,uses) -> 
     //     printfn "File: %A" f
     //     printfn "Def: %A" defs

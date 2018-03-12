@@ -243,6 +243,8 @@ let getOpenDecls (defs: SymbolDef list) (tree: ParsedInput) =
         ) |> List.rev |> Namespace.joinByDot
     let openWithNamespace path x = getNamespace path |> Option.map (fun n -> Namespace.merge n x) |> Option.defaultValue x
     let openWithFullNamespace path x = getFullNamespace path |> fun n -> Namespace.merge n x
+    let mkOpenWith openName (range: Range.range) path = 
+        { OpenName = openName; Pos = range.Start; Range = getScope path |> Option.get; IsAutoOpen = false}
     let mutable xs = []
     let visitor = { new AstVisitorBase<_>() with
         override __.VisitExpr(_, subExprF, defF, e) =
@@ -250,11 +252,11 @@ let getOpenDecls (defs: SymbolDef list) (tree: ParsedInput) =
         override __.VisitModuleDecl(path, defF, d) =
             match d with
             | SynModuleDecl.Open(LongIdentWithDots(lId, _),r) -> 
-                xs <- { OpenName = visitLongIdent lId |> openWithNamespace path; Pos = r.Start; Range = getScope path |> Option.get; IsAutoOpen = false} :: xs
-                xs <- { OpenName = visitLongIdent lId; Pos = r.Start; Range = getScope path |> Option.get; IsAutoOpen = false} :: xs
+                xs <- mkOpenWith (visitLongIdent lId |> openWithNamespace path) r path :: xs
+                xs <- mkOpenWith (visitLongIdent lId) r path :: xs
                 defF d
             | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> 
-                xs <- { OpenName = visitLongIdent lId |> openWithFullNamespace path; Pos = r.Start; Range = r; IsAutoOpen = false } :: xs 
+                xs <- mkOpenWith (visitLongIdent lId |> openWithFullNamespace path) r path :: xs 
                 defF d
             | _ -> defF d
         override __.VisitModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,attrs,_,r)) =

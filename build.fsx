@@ -22,7 +22,7 @@ let testProjectsPattern = "src/**/*Tests.fsproj"
 let srcProjects = !! projectsPattern -- testProjectsPattern
 let testProjects = !! testProjectsPattern
 
-let dotnetCliVersion = "2.1.3"
+let dotnetCliVersion = "2.1.4"
 let mutable dotnetCliPath = "dotnet"
 let installDotNet _ = dotnetCliPath <- DotNetCli.InstallDotNetSDK dotnetCliVersion
 

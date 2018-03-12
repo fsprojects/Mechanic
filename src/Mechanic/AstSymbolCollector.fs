@@ -251,6 +251,7 @@ let getOpenDecls (defs: SymbolDef list) (tree: ParsedInput) =
             match d with
             | SynModuleDecl.Open(LongIdentWithDots(lId, _),r) -> 
                 xs <- { OpenName = visitLongIdent lId |> openWithNamespace path; Pos = r.Start; Range = getScope path |> Option.get; IsAutoOpen = false} :: xs
+                xs <- { OpenName = visitLongIdent lId; Pos = r.Start; Range = getScope path |> Option.get; IsAutoOpen = false} :: xs
                 defF d
             | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> 
                 xs <- { OpenName = visitLongIdent lId |> openWithFullNamespace path; Pos = r.Start; Range = r; IsAutoOpen = false } :: xs 

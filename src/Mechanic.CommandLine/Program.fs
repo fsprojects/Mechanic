@@ -8,10 +8,9 @@ let main argv =
     match argv.Length with
     | 1 ->
         SymbolGetter.getExternalDefs (argv.[0])
-        exit 0
         let p = ProjectFile.loadFromFile argv.[0]
         p |> ProjectFile.getSourceFiles
-        |> SymbolGraph.solveOrder (fun f -> f.FullName)
+        |> SymbolGraph.solveOrder (fun f -> f.FullName) (argv.[0])
         |> function
             | TopologicalOrderResult.TopologicalOrder xs ->
                 xs |> fun x -> ProjectFile.updateProjectFile x p 

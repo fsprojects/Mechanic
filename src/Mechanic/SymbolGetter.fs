@@ -39,7 +39,7 @@ let getSymbols file =
 
 let getExternalDefs projFile =
     let projFile = (FileInfo projFile).FullName
-    let (_,fscArgs) = Utils.Shell.runCmd "src/Mechanic" "dotnet" (sprintf "proj-info %s --fsc-args" projFile)
+    let (_,fscArgs) = Utils.Shell.runCmd "src/Mechanic" "dotnet" (sprintf "proj-info --msbuild-host dotnetmsbuild %s --fsc-args" projFile)
     printfn "%A" fscArgs
     
     let mkTempFile content =
@@ -53,7 +53,10 @@ let foo = 42"""
     printfn "%A" fscArgs
     let projOpts = checker.GetProjectOptionsFromCommandLineArgs(projFile, fscArgs |> List.toArray)
     let wholeProjectResults = checker.ParseAndCheckProject(projOpts) |> Async.RunSynchronously
-    printfn "%A" wholeProjectResults.Errors
-    let rec getSymbols entities = entities |> Seq.collect (fun (e: FSharpEntity) -> [e.TryFullName |> Option.defaultValue e.DisplayName] @ getSymbols e.NestedEntities) |> Seq.toList
+    // printfn "%A" wholeProjectResults.Errors
+    let rec getSymbols entities = 
+        entities
+        |> Seq.collect (fun (e: FSharpEntity) -> [e.TryFullName |> Option.defaultValue e.DisplayName] @ getSymbols e.NestedEntities) |> Seq.toList
     wholeProjectResults.ProjectContext.GetReferencedAssemblies() |> List.collect (fun a -> getSymbols a.Contents.Entities)
-    |> List.iter (printfn "%A")
+    |> List.map (fun x -> AstSymbolCollector.Identificator x)
+    //|> List.iter (printfn "%A")

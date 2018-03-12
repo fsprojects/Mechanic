@@ -39,8 +39,9 @@ let getSymbols file =
 
 let getExternalDefs projFile =
     let projFile = (FileInfo projFile).FullName
-    let (_,fscArgs) = Utils.Shell.runCmd "src/Mechanic" "dotnet" (sprintf "proj-info --msbuild-host dotnetmsbuild %s --fsc-args" projFile)
-    printfn "%A" fscArgs
+    Utils.Shell.runCmd "." "dotnet" (sprintf "restore %s" projFile) |> ignore
+    let (_,fscArgs) = Utils.Shell.runCmd "src/Mechanic" "dotnet" (sprintf "proj-info --msbuild-host dotnetmsbuild %s --fsc-args -v" projFile)
+    //printfn "%A" fscArgs
     
     let mkTempFile content =
         let tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".fs")
@@ -50,13 +51,18 @@ let getExternalDefs projFile =
 let foo = 42"""
 
     let fscArgs = (fscArgs |> List.filter (fun l -> not(isNull l) && l.StartsWith("-"))) @ [mkTempFile emptyLibSource]
-    printfn "%A" fscArgs
+    //printfn "%A" fscArgs
     let projOpts = checker.GetProjectOptionsFromCommandLineArgs(projFile, fscArgs |> List.toArray)
     let wholeProjectResults = checker.ParseAndCheckProject(projOpts) |> Async.RunSynchronously
     // printfn "%A" wholeProjectResults.Errors
-    let rec getSymbols entities = 
-        entities
-        |> Seq.collect (fun (e: FSharpEntity) -> [e.TryFullName |> Option.defaultValue e.DisplayName] @ getSymbols e.NestedEntities) |> Seq.toList
-    wholeProjectResults.ProjectContext.GetReferencedAssemblies() |> List.collect (fun a -> getSymbols a.Contents.Entities)
-    |> List.map (fun x -> AstSymbolCollector.Identificator x)
-    //|> List.iter (printfn "%A")
+    let getSymbols entities = 
+        let rec f entities =
+            entities |> Seq.collect (fun (e: FSharpEntity) -> [e] @ Seq.toList (f e.NestedEntities))
+        f entities 
+        |> Seq.filter (fun e -> not e.IsMeasure)
+        |> Seq.map (fun e -> e.TryFullName |> Option.defaultValue e.DisplayName)|> Seq.toList
+    let extDef = 
+        wholeProjectResults.ProjectContext.GetReferencedAssemblies() |> List.collect (fun a -> getSymbols a.Contents.Entities)
+        |> List.map (fun x -> AstSymbolCollector.Identificator x)
+    //extDef |> List.iter (printfn "%A")
+    extDef

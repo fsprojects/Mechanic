@@ -1,6 +1,7 @@
 source https://api.nuget.org/v3/index.json
 storage:none
 
+nuget DotNet.ProjInfo
 nuget FSharp.Compiler.Service
 nuget Microsoft.NET.Test.Sdk
 nuget Expecto

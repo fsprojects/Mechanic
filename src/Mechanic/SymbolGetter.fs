@@ -40,8 +40,9 @@ let getSymbols file =
 let getExternalDefs projFile =
     let projFile = (FileInfo projFile).FullName
     Utils.Shell.runCmd "." "dotnet" (sprintf "restore %s" projFile) |> ignore
-    let (_,fscArgs) = Utils.Shell.runCmd "src/Mechanic" "dotnet" (sprintf "proj-info --msbuild-host dotnetmsbuild %s --fsc-args -v" projFile)
-    //printfn "%A" fscArgs
+    let (projOpts,_,_) = ProjectCracker.GetProjectOptionsFromProjectFile projFile
+    let fscArgs = projOpts.OtherOptions |> Seq.toList
+    //fscArgs |> Seq.iter (printfn "%A")
     
     let mkTempFile content =
         let tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".fs")

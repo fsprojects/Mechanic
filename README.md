@@ -77,7 +77,7 @@ In the future, we might also want to use e.g.
 - write some code
 - choose a license
 - testing, testing, testing
-- integration into Ionide 
+- integration into Ionide (see [ionide-mechanic](https://github.com/ionide/ionide-mechanic))
 - integration into VS
 
 ## Maintainers

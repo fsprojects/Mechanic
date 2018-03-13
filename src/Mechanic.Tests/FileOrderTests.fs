@@ -30,12 +30,12 @@ let makeTempProject sources =
     tempPath, pf, files
 
 let expectOrder sources =
-    let (_, projFile, files) = makeTempProject sources
-    Expect.equal (SymbolGraph.solveOrder id projFile files) (TopologicalOrder files) "Wrong order of files"
+    let (_, _, files) = makeTempProject sources
+    Expect.equal (SymbolGraph.solveOrder id files) (TopologicalOrder files) "Wrong order of files"
 
 let checkCycle sources =
-    let (_, projFile, files) = makeTempProject sources
-    match SymbolGraph.solveOrder id projFile files with
+    let (_, _, files) = makeTempProject sources
+    match SymbolGraph.solveOrder id files with
     | Cycle _ -> true
     | _ -> false
 
@@ -48,8 +48,8 @@ let expectNotCycle sources =
     |> fun x -> Expect.isFalse x "Dependency cycle not expected"
 
 let expectDependency sources expectedDeps =
-    let (_, projFile, files) = makeTempProject sources
-    let deps = Mechanic.SymbolGraph.getDependencies files projFile
+    let (_, _, files) = makeTempProject sources
+    let deps = Mechanic.SymbolGraph.getDependencies files
     Expect.sequenceEqual 
         (deps |> List.map (fun (a,b,_) -> a,b) |> List.sort) 
         (expectedDeps |> List.map (fun (i,j) -> List.item (i-1) files, List.item (j-1) files) |> List.sort)

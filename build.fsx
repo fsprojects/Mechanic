@@ -51,7 +51,7 @@ let runDotNet args =
 let clean _ = !! "src/**/bin"++"**/obj" |> CleanDirs
 
 let pokeVersion oldVersion newVersion project =
-    if Fake.Core.Xml.Read false project "" "" "/Project/PropertyGroup/PackageVersion" |> Seq.exists ((=) oldVersion) then 
+    if Fake.Core.Xml.Read false project "" "" "/Project/PropertyGroup/PackageVersion" |> Seq.exists ((=) oldVersion) then
         Fake.Core.Xml.PokeInnerText project "Project/PropertyGroup/PackageVersion" newVersion
 
 let setVersion _ =
@@ -60,13 +60,21 @@ let setVersion _ =
 
 let resetVersion _ = srcProjects |> Seq.iter (pokeVersion release.NugetVersion "0.0.0")
 
-let build _ = DotNetCli.Build (fun c -> 
-    { c with 
+let build _ = DotNetCli.Build (fun c ->
+    { c with
         ToolPath = dotnetCliPath
-        Configuration = "debug" 
+        Configuration = "debug"
         WorkingDir = "src"} )
 
 let test _ = testProjects |> Seq.map (sprintf "run -p \"%s\"") |> Seq.iter runDotNet
+
+let releasePackage _ =
+    DotNetCli.Publish (fun c ->
+    { c with
+        ToolPath = dotnetCliPath
+        Configuration = "Release"
+        WorkingDir = "src/Mechanic.CommandLine" } )
+
 
 // Build target definitions
 
@@ -76,11 +84,13 @@ Target.Create "Build" build
 Target.Create "Test" test
 Target.Create "SetVersion" setVersion
 Target.CreateFinal "ResetVersion" resetVersion
+Target.Create "Release" releasePackage
 
 "Clean"
   ==> "InstallDotNetCore"
   ==> "SetVersion"
   ==> "Build"
   ==> "Test"
+  ==> "Release"
 
 Target.RunOrDefault "Test"

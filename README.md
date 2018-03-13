@@ -51,13 +51,11 @@ The following toolchain is implemented to get us started:
 
 * [Paket][paket] for dependency management 
 * [FAKE][fake] as build script
-* [GitVersion][gitversion] for semantic versioning
 * [dotnet cli][dotnet]
 * [FsCheck][fscheck] and [expecto][expecto] for unit testing
 
 [paket]: https://fsprojects.github.io/Paket/
 [fake]: https://fake.build/
-[gitversion]: https://github.com/GitTools/GitVersion/
 [dotnet]: https://github.com/dotnet/cli/
 [fscheck]: https://fscheck.github.io/FsCheck/
 [expecto]: https://github.com/haf/expecto/
@@ -79,7 +77,7 @@ In the future, we might also want to use e.g.
 - write some code
 - choose a license
 - testing, testing, testing
-- integration into Ionide 
+- integration into Ionide (see [ionide-mechanic](https://github.com/ionide/ionide-mechanic))
 - integration into VS
 
 ## Maintainers

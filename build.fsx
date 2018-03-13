@@ -1,3 +1,4 @@
+open System.IO
 (* -- Fake Dependencies paket-inline
 source https://api.nuget.org/v3/index.json
 
@@ -13,6 +14,7 @@ open Fake
 open Fake.Core
 open Fake.Core.TargetOperators
 open Fake.Core.Globbing.Operators
+open Fake.ReleaseNotesHelper
 
 // Helpers and settings that figure themselves out
 
@@ -26,19 +28,14 @@ let dotnetCliVersion = "2.1.4"
 let mutable dotnetCliPath = "dotnet"
 let installDotNet _ = dotnetCliPath <- DotNetCli.InstallDotNetSDK dotnetCliVersion
 
-let gitVersionPath = !! "packages/**/GitVersion.exe" |> Seq.head
+// Read additional information from the release notes document
+let releaseNotes = File.ReadAllLines "RELEASE_NOTES.md"
 
-let version =
-    let gitVersion = Fake.GitVersionHelper.GitVersion (fun ps -> { ps with ToolPath = gitVersionPath })
-    if Fake.EnvironmentHelper.getEnvironmentVarAsBool "APPVEYOR" then
-        let version = { gitVersion with BuildMetaData = Fake.AppVeyor.AppVeyorEnvironment.BuildNumber }
-        Fake.AppVeyor.UpdateBuildVersion version.InformationalVersion
-        version
-    elif Fake.EnvironmentHelper.getEnvironmentVarAsBool "TRAVIS" then
-        let version = { gitVersion with BuildMetaData = Fake.EnvironmentHelper.environVar "TRAVIS_JOB_NUMBER" }
-        version
-    else
-        { gitVersion with BuildMetaData = "local" }
+let releaseNotesData =
+    releaseNotes
+    |> parseAllReleaseNotes
+
+let release = List.head releaseNotesData
 
 let runDotNet args =
     let proc (info : ProcessStartInfo) =
@@ -58,10 +55,10 @@ let pokeVersion oldVersion newVersion project =
         Fake.Core.Xml.PokeInnerText project "Project/PropertyGroup/PackageVersion" newVersion
 
 let setVersion _ =
-    srcProjects |> Seq.iter (pokeVersion "0.0.0" version.NuGetVersion)
+    srcProjects |> Seq.iter (pokeVersion "0.0.0" release.NugetVersion)
     Target.ActivateFinal "ResetVersion"
 
-let resetVersion _ = srcProjects |> Seq.iter (pokeVersion version.NuGetVersion "0.0.0")
+let resetVersion _ = srcProjects |> Seq.iter (pokeVersion release.NugetVersion "0.0.0")
 
 let build _ = DotNetCli.Build (fun c -> 
     { c with 

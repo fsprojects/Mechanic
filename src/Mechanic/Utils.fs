@@ -31,3 +31,49 @@ module Namespace =
         |> Option.map (fun i -> l1 @ (List.skip (min len2 (len1-i)) l2))
         |> Option.defaultValue (l1 @ l2)
         |> joinByDot
+
+module Shell =
+    
+    let runCmd (workingDir: string) (exePath: string) (args: string) =
+        let logOut = System.Collections.Concurrent.ConcurrentQueue<string>()
+        let logErr = System.Collections.Concurrent.ConcurrentQueue<string>()
+        
+        let runProcess () =
+            let psi = System.Diagnostics.ProcessStartInfo()
+            psi.FileName <- exePath
+            psi.WorkingDirectory <- workingDir
+            psi.RedirectStandardOutput <- true
+            psi.RedirectStandardError <- true
+            psi.Arguments <- args
+            psi.CreateNoWindow <- true
+            psi.UseShellExecute <- false
+
+            //Some env var like `MSBUILD_EXE_PATH` override the msbuild used.
+            //The dotnet cli (`dotnet`) set these when calling child processes, and
+            //is wrong because these override some properties of the called msbuild
+            let msbuildEnvVars =
+                psi.Environment.Keys
+                |> Seq.filter (fun s -> s.StartsWith("msbuild", System.StringComparison.OrdinalIgnoreCase))
+                |> Seq.toList
+            for msbuildEnvVar in msbuildEnvVars do
+                psi.Environment.Remove(msbuildEnvVar) |> ignore
+
+
+            use p = new System.Diagnostics.Process()
+            p.StartInfo <- psi
+
+            p.OutputDataReceived.Add(fun ea -> logOut.Enqueue (ea.Data))
+
+            p.ErrorDataReceived.Add(fun ea -> logErr.Enqueue (ea.Data))
+
+            p.Start() |> ignore
+            p.BeginOutputReadLine()
+            p.BeginErrorReadLine()
+            p.WaitForExit()
+
+            let exitCode = p.ExitCode
+
+            exitCode, (workingDir, exePath, args)
+
+        let (exitCode, _) = runProcess()
+        exitCode, (logOut.ToArray() |> Array.toList)

@@ -1,9 +1,6 @@
 module Mechanic.SymbolGetter
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Mechanic.AstSymbolCollector
-open System
-open Mechanic
-open System.IO
 let checker = FSharpChecker.Create()
 
 let parseSingleFile (file, input) = 

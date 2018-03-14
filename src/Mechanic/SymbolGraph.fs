@@ -53,16 +53,16 @@ let getDependencies files maybeProjFile =
                     |> Option.map (fun (d,f) -> f, f2, d))
             uses2 |> List.choose tryFindDef
         )
-        |> List.choose (fun (f1,f2,x) -> f1 |> Option.bind (fun f1 -> if f1 <> f2 then Some (f1, f2, x) else None))
+        |> List.filter (fun (f1,f2,_) -> f1 <> f2) 
         |> List.groupBy (fun (f1, f2, _) -> f1, f2) |> List.map (fun ((f1, f2), xs) -> 
             f1, f2, xs |> List.map (fun (_,_,x) -> x) |> List.distinct)
     //printfn "%A" deps
     deps
 
-let solveOrder fileNameSelector projFile xs =
+let solveOrder fileNameSelector xs =
     let filesMap = xs |> Seq.map (fun x -> fileNameSelector x, x) |> Map.ofSeq
     let files = xs |> List.map fileNameSelector
-    let deps = getDependencies files projFile
+    let deps = getDependencies files
     let edges = deps |> List.map (fun (f1,f2,_) -> f1, f2)
     match GraphAlg.topologicalOrder files edges with
     | TopologicalOrderResult.Cycle xs ->

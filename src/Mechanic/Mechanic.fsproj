@@ -13,7 +13,6 @@
     <Compile Include="ProjectCracker.fs" />
     <Compile Include="SymbolGetter.fs" />
     <Compile Include="SymbolGraph.fs" />
-    <Compile Include="Library.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

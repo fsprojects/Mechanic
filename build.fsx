@@ -1,3 +1,4 @@
+open System.IO
 (* -- Fake Dependencies paket-inline
 source https://api.nuget.org/v3/index.json
 
@@ -12,7 +13,7 @@ open System.Diagnostics
 open Fake
 open Fake.Core
 open Fake.Core.TargetOperators
-open Fake.Core.Globbing.Operators
+open Fake.ReleaseNotesHelper
 
 // Helpers and settings that figure themselves out
 
@@ -26,19 +27,14 @@ let dotnetCliVersion = "2.1.4"
 let mutable dotnetCliPath = "dotnet"
 let installDotNet _ = dotnetCliPath <- DotNetCli.InstallDotNetSDK dotnetCliVersion
 
-let gitVersionPath = !! "packages/**/GitVersion.exe" |> Seq.head
+// Read additional information from the release notes document
+let releaseNotes = File.ReadAllLines "RELEASE_NOTES.md"
 
-let version =
-    let gitVersion = Fake.GitVersionHelper.GitVersion (fun ps -> { ps with ToolPath = gitVersionPath })
-    if Fake.EnvironmentHelper.getEnvironmentVarAsBool "APPVEYOR" then
-        let version = { gitVersion with BuildMetaData = Fake.AppVeyor.AppVeyorEnvironment.BuildNumber }
-        Fake.AppVeyor.UpdateBuildVersion version.InformationalVersion
-        version
-    elif Fake.EnvironmentHelper.getEnvironmentVarAsBool "TRAVIS" then
-        let version = { gitVersion with BuildMetaData = Fake.EnvironmentHelper.environVar "TRAVIS_JOB_NUMBER" }
-        version
-    else
-        { gitVersion with BuildMetaData = "local" }
+let releaseNotesData =
+    releaseNotes
+    |> parseAllReleaseNotes
+
+let release = List.head releaseNotesData
 
 let runDotNet args =
     let proc (info : ProcessStartInfo) =
@@ -54,22 +50,30 @@ let runDotNet args =
 let clean _ = !! "src/**/bin"++"**/obj" |> CleanDirs
 
 let pokeVersion oldVersion newVersion project =
-    if Fake.Core.Xml.Read false project "" "" "/Project/PropertyGroup/PackageVersion" |> Seq.exists ((=) oldVersion) then 
+    if Fake.Core.Xml.Read false project "" "" "/Project/PropertyGroup/PackageVersion" |> Seq.exists ((=) oldVersion) then
         Fake.Core.Xml.PokeInnerText project "Project/PropertyGroup/PackageVersion" newVersion
 
 let setVersion _ =
-    srcProjects |> Seq.iter (pokeVersion "0.0.0" version.NuGetVersion)
+    srcProjects |> Seq.iter (pokeVersion "0.0.0" release.NugetVersion)
     Target.ActivateFinal "ResetVersion"
 
-let resetVersion _ = srcProjects |> Seq.iter (pokeVersion version.NuGetVersion "0.0.0")
+let resetVersion _ = srcProjects |> Seq.iter (pokeVersion release.NugetVersion "0.0.0")
 
-let build _ = DotNetCli.Build (fun c -> 
-    { c with 
+let build _ = DotNetCli.Build (fun c ->
+    { c with
         ToolPath = dotnetCliPath
-        Configuration = "debug" 
+        Configuration = "debug"
         WorkingDir = "src"} )
 
 let test _ = testProjects |> Seq.map (sprintf "run -p \"%s\"") |> Seq.iter runDotNet
+
+let releasePackage _ =
+    DotNetCli.Publish (fun c ->
+    { c with
+        ToolPath = dotnetCliPath
+        Configuration = "Release"
+        WorkingDir = "src/Mechanic.CommandLine" } )
+
 
 // Build target definitions
 
@@ -79,11 +83,13 @@ Target.Create "Build" build
 Target.Create "Test" test
 Target.Create "SetVersion" setVersion
 Target.CreateFinal "ResetVersion" resetVersion
+Target.Create "Release" releasePackage
 
 "Clean"
   ==> "InstallDotNetCore"
   ==> "SetVersion"
   ==> "Build"
   ==> "Test"
+  ==> "Release"
 
 Target.RunOrDefault "Test"

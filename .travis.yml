@@ -1,5 +1,3 @@
-language: csharp
-
 dotnet: 2.1.4
 
 before_install:

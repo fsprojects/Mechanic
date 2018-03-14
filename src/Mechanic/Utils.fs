@@ -1,7 +1,5 @@
 module Mechanic.Utils
 
-let tee f x = f x; x
-
 module List =
     let rec internal distribute e = function
       | [] -> [[e]]
@@ -27,13 +25,12 @@ module Namespace =
         [0..l] |> List.tryFind (fun i -> 
             let l1' = l1 |> List.skip i |> List.take (len1-i)
             let l2' = l2 |> List.take (len2-i)
-            if l1' = [] || l2' = [] then false else Seq.forall2 (fun x y -> x = y) l1' l2')
+            if List.isEmpty l1' || List.isEmpty l2' then false else Seq.forall2 (=) l1' l2')
         |> Option.map (fun i -> l1 @ (List.skip (min len2 (len1-i)) l2))
         |> Option.defaultValue (l1 @ l2)
         |> joinByDot
 
 module Shell =
-    
     let runCmd (workingDir: string) (exePath: string) (args: string) =
         let logOut = System.Collections.Concurrent.ConcurrentQueue<string>()
         let logErr = System.Collections.Concurrent.ConcurrentQueue<string>()
@@ -57,7 +54,6 @@ module Shell =
                 |> Seq.toList
             for msbuildEnvVar in msbuildEnvVars do
                 psi.Environment.Remove(msbuildEnvVar) |> ignore
-
 
             use p = new System.Diagnostics.Process()
             p.StartInfo <- psi

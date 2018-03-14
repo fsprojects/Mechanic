@@ -59,10 +59,10 @@ let getDependencies files maybeProjFile =
     //printfn "%A" deps
     deps
 
-let solveOrder fileNameSelector projFile xs =
+let solveOrder fileNameSelector maybeProjFile xs =
     let filesMap = xs |> Seq.map (fun x -> fileNameSelector x, x) |> Map.ofSeq
     let files = xs |> List.map fileNameSelector
-    let deps = getDependencies files projFile
+    let deps = getDependencies files maybeProjFile
     let edges = deps |> List.map (fun (f1,f2,_) -> f1, f2)
     match GraphAlg.topologicalOrder files edges with
     | TopologicalOrderResult.Cycle xs ->

@@ -21,5 +21,4 @@ let main argv =
         let pattern = argv.[1]
         SymbolGraph.solveOrderFromPattern root pattern 
         |> printfn "%A"
-    | _ -> ()
     0

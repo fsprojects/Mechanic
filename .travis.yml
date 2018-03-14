@@ -1,6 +1,7 @@
 language: csharp
 dotnet: 2.1.4
-mono: none
+# hopefully soon
+#mono: none
 before_install:
   - sudo apt-get install libunwind8
 script:

@@ -13,7 +13,6 @@ open System.Diagnostics
 open Fake
 open Fake.Core
 open Fake.Core.TargetOperators
-open Fake.Core.Globbing.Operators
 open Fake.ReleaseNotesHelper
 
 // Helpers and settings that figure themselves out

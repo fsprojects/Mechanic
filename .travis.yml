@@ -1,6 +1,5 @@
 language: csharp
-mono:
-  - latest
+
 before_install:
   - sudo apt-get install libunwind8
 script:

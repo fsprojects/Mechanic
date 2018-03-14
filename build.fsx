@@ -1,19 +1,13 @@
-open System.IO
-(* -- Fake Dependencies paket-inline
-source https://api.nuget.org/v3/index.json
+#load ".fake/build.fsx/intellisense.fsx"
 
-nuget Fake.Core.Target prerelease
-nuget FSharp.Core prerelease
--- Fake Dependencies -- *)
-
-#r @"packages/build/FAKE/tools/FakeLib.dll"
-open System
 open System.Diagnostics
+open System.IO
 
-open Fake
+open Fake.IO
 open Fake.Core
+open Fake.DotNet
 open Fake.Core.TargetOperators
-open Fake.ReleaseNotesHelper
+open Fake.IO.Globbing.Operators
 
 // Helpers and settings that figure themselves out
 
@@ -22,36 +16,25 @@ let testProjectsPattern = "src/**/*Tests.fsproj"
 
 let srcProjects = !! projectsPattern -- testProjectsPattern
 let testProjects = !! testProjectsPattern
-
-let dotnetCliVersion = "2.1.4"
-let mutable dotnetCliPath = "dotnet"
-let installDotNet _ = dotnetCliPath <- DotNetCli.InstallDotNetSDK dotnetCliVersion
+let installDotNet _ = 
+    DotNet.Install DotNet.Release_2_1_4
 
 // Read additional information from the release notes document
 let releaseNotes = File.ReadAllLines "RELEASE_NOTES.md"
 
 let releaseNotesData =
     releaseNotes
-    |> parseAllReleaseNotes
+    |> ReleaseNotes.parseAllReleaseNotes
 
 let release = List.head releaseNotesData
 
-let runDotNet args =
-    let proc (info : ProcessStartInfo) =
-        info.FileName <- dotnetCliPath
-        info.WorkingDirectory <- "."
-        info.Arguments <- args
-
-    let result = ProcessHelper.ExecProcess proc TimeSpan.MaxValue
-    if result <> 0 then failwithf "dotnet %s failed" args
-
 // Build target implementations
 
-let clean _ = !! "src/**/bin"++"**/obj" |> CleanDirs
+let clean _ = !! "src/**/bin"++"**/obj" |> Shell.CleanDirs
 
 let pokeVersion oldVersion newVersion project =
-    if Fake.Core.Xml.Read false project "" "" "/Project/PropertyGroup/PackageVersion" |> Seq.exists ((=) oldVersion) then
-        Fake.Core.Xml.PokeInnerText project "Project/PropertyGroup/PackageVersion" newVersion
+    if Xml.Read false project "" "" "/Project/PropertyGroup/PackageVersion" |> Seq.exists ((=) oldVersion) then
+        Xml.PokeInnerText project "Project/PropertyGroup/PackageVersion" newVersion
 
 let setVersion _ =
     srcProjects |> Seq.iter (pokeVersion "0.0.0" release.NugetVersion)
@@ -59,20 +42,21 @@ let setVersion _ =
 
 let resetVersion _ = srcProjects |> Seq.iter (pokeVersion release.NugetVersion "0.0.0")
 
-let build _ = DotNetCli.Build (fun c ->
+let build _ = DotNet.Build (fun c ->
     { c with
-        ToolPath = dotnetCliPath
-        Configuration = "debug"
-        WorkingDir = "src"} )
+        Configuration = DotNet.Debug
+        Common = { c.Common with WorkingDirectory = "src" } } ) ""
 
-let test _ = testProjects |> Seq.map (sprintf "run -p \"%s\"") |> Seq.iter runDotNet
+let failOnError (p : ProcessResult) =
+    if p.ExitCode <> 0 then failwithf "process failed with exit code %d" p.ExitCode
+let test _ =
+    testProjects |> Seq.map (sprintf "-p \"%s\"") |> Seq.iter (DotNet.Exec id "run" >> failOnError)
 
 let releasePackage _ =
-    DotNetCli.Publish (fun c ->
+    DotNet.Publish (fun c ->
     { c with
-        ToolPath = dotnetCliPath
-        Configuration = "Release"
-        WorkingDir = "src/Mechanic.CommandLine" } )
+        Configuration = DotNet.Release
+        Common = { c.Common with WorkingDirectory = "src/Mechanic.CommandLine" } }) ""
 
 
 // Build target definitions

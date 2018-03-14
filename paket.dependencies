@@ -1,4 +1,4 @@
-source https://api.nuget.org/v3/index.json
+source https://www.nuget.org/api/v2/
 storage:none
 
 nuget FSharp.Compiler.Service
@@ -6,7 +6,11 @@ nuget Microsoft.NET.Test.Sdk
 nuget Expecto
 nuget Expecto.FsCheck
 
+// [ FAKE GROUP ]
 group Build
-  source https://api.nuget.org/v3/index.json
+  source https://www.nuget.org/api/v2/
 
-  nuget FAKE prerelease
+  nuget Fake.Core.Target prerelease
+  nuget Fake.DotNet.Cli prerelease
+  nuget Fake.Core.ReleaseNotes prerelease
+  nuget Fake.Core.Xml prerelease

@@ -5,4 +5,4 @@ before_install:
   - sudo apt-get install libunwind8
 script:
   - git fetch --unshallow
-  - ./build.sh --use-mono
+  - ./build.sh

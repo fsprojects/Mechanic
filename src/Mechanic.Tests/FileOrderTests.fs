@@ -30,12 +30,12 @@ let makeTempProject sources =
     tempPath, pf, files
 
 let expectOrder sources =
-    let (_, _, files) = makeTempProject sources
-    Expect.equal (SymbolGraph.solveOrder id files) (TopologicalOrder files) "Wrong order of files"
+    let (_, projFile, files) = makeTempProject sources
+    Expect.equal (SymbolGraph.solveOrder id (Some projFile) files) (TopologicalOrder files) "Wrong order of files"
 
 let checkCycle sources =
-    let (_, _, files) = makeTempProject sources
-    match SymbolGraph.solveOrder id files with
+    let (_, projFile, files) = makeTempProject sources
+    match SymbolGraph.solveOrder id (Some projFile) files with
     | Cycle _ -> true
     | _ -> false
 
@@ -47,13 +47,16 @@ let expectNotCycle sources =
     checkCycle sources 
     |> fun x -> Expect.isFalse x "Dependency cycle not expected"
 
-let expectDependency sources expectedDeps =
-    let (_, _, files) = makeTempProject sources
-    let deps = Mechanic.SymbolGraph.getDependencies files
+let expectDependencyHelper useExternalDeps sources expectedDeps =
+    let (_, projFile, files) = makeTempProject sources
+    let deps = Mechanic.SymbolGraph.getDependencies files (if useExternalDeps then Some projFile else None)
     Expect.sequenceEqual 
         (deps |> List.map (fun (a,b,_) -> a,b) |> List.sort) 
         (expectedDeps |> List.map (fun (i,j) -> List.item (i-1) files, List.item (j-1) files) |> List.sort)
         "Dependency differs"
+
+let expectDependencyWithExternalDefs sources expectedDeps = expectDependencyHelper true sources expectedDeps
+let expectDependency sources expectedDeps = expectDependencyHelper false sources expectedDeps
 
 [<Tests>]
  let tests =
@@ -644,5 +647,17 @@ let expectDependency sources expectedDeps =
                 let y = x
         """
             expectDependency [source1; source2; source3] [2,3]
+            
+        }
+
+        test "external deps 1" {
+            let source1 = """module M
+            let x = System.IO.DirectoryInfo(".")
+        """
+            let source2 = """[<AutoOpen>]
+            module M2
+            let System.IO.DirectoryInfo x = ()
+        """
+            expectDependencyWithExternalDefs [source1; source2] []
         }
     ]

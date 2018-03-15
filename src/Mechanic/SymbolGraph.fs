@@ -5,13 +5,14 @@ open Mechanic.Utils
 open Mechanic.GraphAlg
 open AstSymbolCollector
 
-let getDependencies files =
+let getDependencies files maybeProjFile =
     let depsData = files |> List.map (fun (f: string) -> if f.EndsWith ".fs" then SymbolGetter.getSymbols f else f, [], [])
     let autoOpens = depsData |> List.collect (fun (_,_,g) -> g |> List.collect (fun x -> x.Opens |> List.filter (fun o -> o.IsAutoOpen)))
     let depsData = depsData |> List.map (fun (f,defs,opens) -> f, defs, opens |> List.map (fun g -> { g with Opens = g.Opens @ autoOpens }))
+    let findEntity = maybeProjFile |> Option.map SymbolGetter.getExternalFindDefFun |> Option.defaultValue (fun _ -> None)
     let allDefsMap = 
-        depsData |> Seq.collect (fun (f,defs,_) -> defs |> List.map (fun d -> Symbol.map lastPart d, (d, f)))
-        |> Seq.groupBy fst |> Seq.map (fun (k, xs) -> k, xs |> Seq.map snd |> Seq.toList) |> Map.ofSeq
+        let defs = depsData |> Seq.collect (fun (f,defs,_) -> defs |> List.map (fun d -> Symbol.map lastPart d, (d, Some f)))
+        defs |> Seq.groupBy fst |> Seq.map (fun (k, xs) -> k, xs |> Seq.map snd |> Seq.toList) |> Map.ofSeq
     let depsData = 
         depsData |> List.map (fun (f,defs,opens) -> 
             f, defs, opens |> List.map (fun o -> 
@@ -33,32 +34,35 @@ let getDependencies files =
             let opensVariants symbol = ("" :: opens2) |> List.map (fun o -> symbol |> Symbol.map (fun s -> merge o s))
             //printfn "%A" allDefsMap
             let tryFindDef s = 
-                allDefsMap |> Map.tryFind (Symbol.map lastPart s)
-                |> Option.bind (fun g -> 
-                    let r = 
-                        // try local definitions (from same file) first
-                        opensVariants s |> List.tryPick (fun o -> g |> List.tryFind (fun (d,f) -> o = d && f=f2))
-                        |> Option.orElseWith (fun () -> opensVariants s |> List.tryPick (fun o -> g |> List.tryFind (fun (d,_) -> o = d)))
-                    match r with
-                    | None -> 
-                        //printfn "No match: %s -- %A -- %A" f2 (opensVariants s) g
-                        None
-                    | Some _ -> 
-                        //printfn "Find match: %A -- %s" r f2
-                        r)
-                |> Option.map (fun (d,f) -> f, f2, d)
+                // check for external definition
+                opensVariants s |> List.tryPick findEntity |> Option.map (fun d -> None, f2, d)
+                |> Option.orElseWith (fun () ->
+                    allDefsMap |> Map.tryFind (Symbol.map lastPart s)
+                    |> Option.bind (fun g -> 
+                        let r = 
+                            // try local definitions (from same file) first
+                            opensVariants s |> List.tryPick (fun o -> g |> List.tryFind (fun (d,f) -> o = d && Option.forall ((=)f2) f))
+                            |> Option.orElseWith (fun () -> opensVariants s |> List.tryPick (fun o -> g |> List.tryFind (fun (d,_) -> o = d)))
+                        match r with
+                        | None -> 
+                            //printfn "No match: %s -- %A -- %A" f2 (opensVariants s) g
+                            None
+                        | Some _ -> 
+                            //printfn "Find match: %A -- %s" r f2
+                            r)
+                    |> Option.map (fun (d,f) -> f, f2, d))
             uses2 |> List.choose tryFindDef
         )
-        |> List.filter (fun (f1,f2,_) -> f1 <> f2) 
+        |> List.choose (fun (f1,f2,x) -> f1 |> Option.bind (fun f1 -> if f1 <> f2 then Some (f1, f2, x) else None))
         |> List.groupBy (fun (f1, f2, _) -> f1, f2) |> List.map (fun ((f1, f2), xs) -> 
             f1, f2, xs |> List.map (fun (_,_,x) -> x) |> List.distinct)
     //printfn "%A" deps
     deps
 
-let solveOrder fileNameSelector xs =
+let solveOrder fileNameSelector maybeProjFile xs =
     let filesMap = xs |> Seq.map (fun x -> fileNameSelector x, x) |> Map.ofSeq
     let files = xs |> List.map fileNameSelector
-    let deps = getDependencies files
+    let deps = getDependencies files maybeProjFile
     let edges = deps |> List.map (fun (f1,f2,_) -> f1, f2)
     match GraphAlg.topologicalOrder files edges with
     | TopologicalOrderResult.Cycle xs ->
@@ -68,4 +72,4 @@ let solveOrder fileNameSelector xs =
 
 let solveOrderFromPattern root filePattern =
     Directory.EnumerateFiles(root,filePattern) |> Seq.toList
-    |> solveOrder id
+    |> solveOrder id None

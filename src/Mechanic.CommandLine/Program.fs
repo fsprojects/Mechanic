@@ -9,7 +9,7 @@ let main argv =
     | 1 ->
         let p = ProjectFile.loadFromFile argv.[0]
         p |> ProjectFile.getSourceFiles
-        |> SymbolGraph.solveOrder (fun f -> f.FullName)
+        |> SymbolGraph.solveOrder (fun f -> f.FullName) (Some argv.[0])
         |> function
             | TopologicalOrderResult.TopologicalOrder xs ->
                 xs |> fun x -> ProjectFile.updateProjectFile x p 

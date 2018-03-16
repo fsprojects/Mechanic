@@ -1,8 +1,9 @@
 language: csharp
-mono:
-  - latest
+dotnet: 2.1.4
+# hopefully soon
+#mono: none
 before_install:
   - sudo apt-get install libunwind8
 script:
   - git fetch --unshallow
-  - ./build.sh --use-mono
+  - ./build.sh

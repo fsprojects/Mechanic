@@ -1,4 +1,3 @@
-<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -11,6 +10,7 @@
     <Compile Include="GraphAlg.fs" />
     <Compile Include="Utils.fs" />
     <Compile Include="AstSymbolCollector.fs" />
+    <Compile Include="ProjectCracker.fs" />
     <Compile Include="SymbolGetter.fs" />
     <Compile Include="SymbolGraph.fs" />
   </ItemGroup>

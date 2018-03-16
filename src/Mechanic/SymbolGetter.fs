@@ -1,6 +1,7 @@
 module Mechanic.SymbolGetter
 open Microsoft.FSharp.Compiler.SourceCodeServices
 open Mechanic.AstSymbolCollector
+open System.IO
 let checker = FSharpChecker.Create()
 
 let parseSingleFile (file, input) = 
@@ -33,3 +34,25 @@ let getSymbols file =
         |> List.filter (Symbol.get >> Utils.Namespace.lastPart >> (fun x -> x.StartsWith "op_") >> not)
 
     file, defSymbolNames, opens
+
+let getExternalFindDefFun projFile =
+    let projFile = (FileInfo projFile).FullName
+    Utils.Shell.runCmd "." "dotnet" (sprintf "restore %s" projFile) |> ignore
+    let (projOpts,_,_) = ProjectCracker.GetProjectOptionsFromProjectFile projFile
+    let fscArgs = projOpts.OtherOptions |> Seq.toList
+    //fscArgs |> Seq.iter (printfn "%A")
+    
+    let mkTempFile content =
+        let tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName() + ".fs")
+        File.WriteAllText(tempPath, content)
+        tempPath
+    let emptyLibSource = """module Tmp
+let foo = 42"""
+
+    let fscArgs = (fscArgs |> List.filter (fun l -> not(isNull l) && l.StartsWith("-"))) @ [mkTempFile emptyLibSource]
+    //printfn "%A" fscArgs
+    let projOpts = checker.GetProjectOptionsFromCommandLineArgs(projFile, fscArgs |> List.toArray)
+    let wholeProjectResults = checker.ParseAndCheckProject(projOpts) |> Async.RunSynchronously
+    // printfn "%A" wholeProjectResults.Errors
+    let assemblies = wholeProjectResults.ProjectContext.GetReferencedAssemblies()
+    fun x -> assemblies |> List.tryPick (fun a -> a.Contents.FindEntityByPath (Symbol.get x |> Utils.Namespace.splitByDot)  |> Option.map (fun _ -> x))

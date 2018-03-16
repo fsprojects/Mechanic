@@ -4,3 +4,4 @@ packages
 paket-files
 .vscode
 .fake
+*.orig

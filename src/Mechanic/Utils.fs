@@ -72,4 +72,4 @@ module Shell =
             exitCode, (workingDir, exePath, args)
 
         let (exitCode, _) = runProcess()
-        exitCode, (logOut.ToArray() |> Array.toList)
+        exitCode, (logOut |> Seq.filter (not<<isNull) |> Seq.toList)

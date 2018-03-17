@@ -37,7 +37,13 @@ let getSymbols file =
 
 let getExternalFindDefFun projFile =
     let projFile = (FileInfo projFile).FullName
-    Utils.Shell.runCmd "." "dotnet" (sprintf "restore %s" projFile) |> ignore
+    let runRestore() =
+        let args = (sprintf "restore %s" projFile)
+        let (exitCode, logOut) = Utils.Shell.runCmd "." "dotnet" args
+        if exitCode <> 0 || logOut |> Seq.exists (fun l -> l.Contains "error MSB") then 
+            let msg = (sprintf "\"dotnet %s\" failed (exitCode %i) with output:" args exitCode) :: logOut |> String.concat System.Environment.NewLine
+            failwith msg
+    runRestore()
     let (projOpts,_,_) = ProjectCracker.GetProjectOptionsFromProjectFile projFile
     let fscArgs = projOpts.OtherOptions |> Seq.toList
     //fscArgs |> Seq.iter (printfn "%A")

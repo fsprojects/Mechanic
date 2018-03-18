@@ -3,15 +3,35 @@ open System.IO
 open Mechanic
 open Mechanic.Files
 open Mechanic.GraphAlg
-open Mechanic.Files
 
 [<EntryPoint>]
 let main argv =
-    let projectDirectory =
+    let loadFromDir dir =
+        Directory.EnumerateFiles dir
+        |> Seq.map ProjectFile.tryLoad
+        |> Seq.filter Option.isSome
+        |> Seq.map (fun projectFile -> projectFile.Value)
+
+    let projectFiles =
         if argv.Length = 0 then
-            Environment.CurrentDirectory
+            loadFromDir Environment.CurrentDirectory
         else
-            Path.Combine (Environment.CurrentDirectory, argv.[0])
+            try
+                let path = Path.Combine (Environment.CurrentDirectory, argv.[0])
+                let attributes = File.GetAttributes path
+                if attributes.HasFlag FileAttributes.Directory then
+                    loadFromDir path
+                else
+                    let fi = FileInfo path
+                    match fi.Extension with
+                    | ".fsproj" ->
+                       let projectFile = ProjectFile.loadFromFile path
+                       seq {
+                           yield projectFile
+                       }
+                    | _ -> Seq.empty
+            with
+            | _ -> Seq.empty
 
     let solve (n, m) projectFile =
         printfn "Project %s" projectFile.FileName
@@ -29,12 +49,6 @@ let main argv =
                 TopologicalOrderResult.Cycle (xs |> List.map (fun f -> f.FullName))
                 |> printfn "%A"
                 (n, m + 1)
-
-    let projectFiles =
-        Directory.EnumerateFiles projectDirectory
-        |> Seq.map ProjectFile.tryLoad
-        |> Seq.filter Option.isSome
-        |> Seq.map (fun projectFile -> projectFile.Value)
 
     if Seq.isEmpty projectFiles then
         printfn "No *.fsproj files found in %s" Environment.CurrentDirectory

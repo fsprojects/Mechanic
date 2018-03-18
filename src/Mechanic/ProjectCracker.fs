@@ -1,4 +1,5 @@
 /// Copied from https://github.com/fable-compiler/Fable/blob/f8457dc6ff3208af85166a14da0feb520927bc55/src/dotnet/dotnet-fable/ProjectCoreCracker.fs
+/// Verbose SDK changes based on https://github.com/fsharp/FsAutoComplete/blob/master/src/FsAutoComplete.Core/ProjectCrackerDotnetSdk.fs
 module Mechanic.ProjectCracker
 
 open System
@@ -7,16 +8,9 @@ open System.IO
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
 module ProjectRecognizer =
-
+    // This part is from https://github.com/fsharp/FsAutoComplete/blob/ad1b81ae50ad08ae67d856aea602da97dde4186f/src/FsAutoComplete.Core/ProjectCrackerTypes.fs#L67
     let (|NetCoreProjectJson|NetCoreSdk|Net45|Unsupported|) file =
-        //.NET Core Sdk preview3+ replace project.json with fsproj
-        //Easy way to detect new fsproj is to check the msbuild version of .fsproj
-        //Post preview5 has (`Sdk="FSharp.NET.Sdk;Microsoft.NET.Sdk"`), use that
-        //  for checking .NET Core fsproj. NB: casing of FSharp may be inconsistent.
-        //The `dotnet-compile-fsc.rsp` are created also in `preview3+`, so we can
-        //  reuse the same behaviour of `preview2`
         let rec getProjectType (sr:StreamReader) limit =
-            // post preview5 dropped this, check Sdk field
             let isNetCore (line:string) = line.ToLower().Contains("sdk=")
             if limit = 0 then
                 Unsupported // unsupported project type

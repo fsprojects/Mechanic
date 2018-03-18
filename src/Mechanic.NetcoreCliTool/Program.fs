@@ -1,4 +1,4 @@
-﻿open System
+open System
 open System.IO
 open Mechanic
 open Mechanic.Files
@@ -38,21 +38,22 @@ let main argv =
 
         projectFile
         |> ProjectFile.getSourceFiles
-        |> SymbolGraph.solveOrder (fun f -> f.FullName)
+        |> SymbolGraph.solveOrder (fun f -> f.FullName) (Some projectFile.FileName)
         |> function
             | TopologicalOrderResult.TopologicalOrder xs ->
                 ProjectFile.updateProjectFile xs projectFile
                 TopologicalOrderResult.TopologicalOrder (xs |> List.map (fun f -> f.FullName))
-                |> printfn "%A"
+                |> printfn "%A\n"
                 (n + 1, m)
             | TopologicalOrderResult.Cycle xs ->
                 TopologicalOrderResult.Cycle (xs |> List.map (fun f -> f.FullName))
-                |> printfn "%A"
+                |> printfn "%A\n"
                 (n, m + 1)
 
     if Seq.isEmpty projectFiles then
         printfn "No *.fsproj files found in %s" Environment.CurrentDirectory
     else
+        printfn "found %i projects\n" (Seq.length projectFiles)
         projectFiles
         |> Seq.fold solve (0, 0)
         |> fun (n, m) ->

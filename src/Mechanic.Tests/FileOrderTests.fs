@@ -5,19 +5,12 @@ open Mechanic
 open Mechanic.GraphAlg
 open System.IO
 
-let makeTempProject sources = 
+let makeTempProjectFromTemplate templatePath sources = 
     let projectFileText files = 
         let items = files |> List.map (sprintf """<Compile Include="%s" />""") |> String.concat System.Environment.NewLine
-        """<?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-  </PropertyGroup>
-  <ItemGroup>
-        """ + items + """
-  </ItemGroup>
-</Project>
-"""
+        let template = File.ReadAllText (Path.Combine("templates", templatePath))
+        template.Replace("@@@items@@@", items)
+
     let tempPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName())
     Directory.CreateDirectory tempPath |> ignore
     let pf = Path.Combine(tempPath, "TestProject.fsproj")
@@ -29,31 +22,36 @@ let makeTempProject sources =
     File.WriteAllText(pf, (projectFileText files))
     tempPath, pf, files
 
-let expectOrder sources =
-    let (_, projFile, files) = makeTempProject sources
-    Expect.equal (SymbolGraph.solveOrder id (Some projFile) files) (TopologicalOrder files) "Wrong order of files"
+let withProjectTemplates sources f =
+    let templates = [
+        "newSdk.fsproj.template"
+        "verboseSdk.fsproj.template"
+    ]
+    templates |> Seq.iter (fun t -> makeTempProjectFromTemplate t sources |> f)
 
-let checkCycle sources =
-    let (_, projFile, files) = makeTempProject sources
-    match SymbolGraph.solveOrder id (Some projFile) files with
-    | Cycle _ -> true
-    | _ -> false
+let expectOrder sources =
+    withProjectTemplates sources <| fun (_, projFile, files) ->
+        Expect.equal (SymbolGraph.solveOrder id (Some projFile) files) (TopologicalOrder files) "Wrong order of files"
+
+let checkCycle sources expectF =
+    withProjectTemplates sources <| fun (_, projFile, files) ->
+        match SymbolGraph.solveOrder id (Some projFile) files with
+        | Cycle _ -> expectF true
+        | _ -> expectF false
 
 let expectCycle sources =
-    checkCycle sources 
-    |> fun x -> Expect.isTrue x "Dependency cycle expected"
+    checkCycle sources (fun x -> Expect.isTrue x "Dependency cycle expected")
 
 let expectNotCycle sources =
-    checkCycle sources 
-    |> fun x -> Expect.isFalse x "Dependency cycle not expected"
+    checkCycle sources (fun x -> Expect.isFalse x "Dependency cycle not expected")
 
 let expectDependencyHelper useExternalDeps sources expectedDeps =
-    let (_, projFile, files) = makeTempProject sources
-    let deps = Mechanic.SymbolGraph.getDependencies files (if useExternalDeps then Some projFile else None)
-    Expect.sequenceEqual 
-        (deps |> List.map (fun (a,b,_) -> a,b) |> List.sort) 
-        (expectedDeps |> List.map (fun (i,j) -> List.item (i-1) files, List.item (j-1) files) |> List.sort)
-        "Dependency differs"
+    withProjectTemplates sources <| fun (_, projFile, files) ->
+        let deps = Mechanic.SymbolGraph.getDependencies files (if useExternalDeps then Some projFile else None)
+        Expect.sequenceEqual 
+            (deps |> List.map (fun (a,b,_) -> a,b) |> List.sort) 
+            (expectedDeps |> List.map (fun (i,j) -> List.item (i-1) files, List.item (j-1) files) |> List.sort)
+            "Dependency differs"
 
 let expectDependencyWithExternalDefs sources expectedDeps = expectDependencyHelper true sources expectedDeps
 let expectDependency sources expectedDeps = expectDependencyHelper false sources expectedDeps

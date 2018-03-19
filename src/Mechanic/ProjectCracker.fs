@@ -26,6 +26,76 @@ module ProjectRecognizer =
             use sr = File.OpenText(file)
             getProjectType sr 3
 
+module Environment =
+  let (</>) x (y: string) = Path.Combine(x, y.TrimStart [| '\\'; '/' |])
+  let private environVar v = Environment.GetEnvironmentVariable v
+
+  let private programFilesX86 =
+      let wow64 = environVar "PROCESSOR_ARCHITEW6432"
+      let globalArch = environVar "PROCESSOR_ARCHITECTURE"
+      match wow64, globalArch with
+      | "AMD64", "AMD64"
+      | null, "AMD64"
+      | "x86", "AMD64" -> environVar "ProgramFiles(x86)"
+      | _ -> environVar "ProgramFiles"
+      |> fun detected -> if String.IsNullOrEmpty detected then @"C:\Program Files (x86)\" else detected
+
+  // Below code slightly modified from FAKE MSBuildHelper.fs
+
+  let private tryFindFile dirs file =
+      let files =
+          dirs
+          |> Seq.map (fun (path : string) ->
+              try
+                 let path =
+                    if path.StartsWith("\"") && path.EndsWith("\"")
+                    then path.Substring(1, path.Length - 2)
+                    else path
+                 let dir = new DirectoryInfo(path)
+                 if not dir.Exists then ""
+                 else
+                     let fi = new FileInfo(dir.FullName </> file)
+                     if fi.Exists then fi.FullName
+                     else ""
+              with
+              | _ -> "")
+          |> Seq.filter ((<>) "")
+          |> Seq.cache
+      if not (Seq.isEmpty files) then Some(Seq.head files)
+      else None
+
+  let private tryFindPath backupPaths tool =
+      let paths = Environment.GetEnvironmentVariable "PATH" + string Path.PathSeparator + backupPaths
+      let paths = paths.Split(Path.PathSeparator)
+      tryFindFile paths tool
+
+  let private findPath backupPaths tool =
+      match tryFindPath backupPaths tool with
+      | Some file -> file
+      | None -> tool
+  let runningOnMono =
+        try not << isNull <| Type.GetType "Mono.Runtime"
+        with _ -> false
+  let msbuild =
+#if SCRIPT_REFS_FROM_MSBUILD
+      if not(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) then
+        //well, depends on mono version, but like this is mono >= 5.2 (msbuild on mono 5.0 sort of works)
+        "msbuild"
+#else
+      if runningOnMono then "xbuild" // mono <= 5.0
+#endif
+      else
+        let MSBuildPath =
+            (programFilesX86 </> @"\MSBuild\14.0\Bin") + ";" +
+            (programFilesX86 </> @"\MSBuild\12.0\Bin") + ";" +
+            (programFilesX86 </> @"\MSBuild\12.0\Bin\amd64") + ";" +
+            @"c:\Windows\Microsoft.NET\Framework\v4.0.30319\;" +
+            @"c:\Windows\Microsoft.NET\Framework\v4.0.30128\;" +
+            @"c:\Windows\Microsoft.NET\Framework\v3.5\"
+        let ev = Environment.GetEnvironmentVariable "MSBuild"
+        if not (String.IsNullOrEmpty ev) then ev
+        else findPath MSBuildPath "MSBuild.exe"
+
 module MSBuildPrj = Dotnet.ProjInfo.Inspect
 
 type private ProjectParsingSdk = DotnetSdk | VerboseSdk
@@ -44,6 +114,16 @@ let private runProcess (workingDir: string) (exePath: string) (args: string) =
     psi.Arguments <- args
     psi.CreateNoWindow <- true
     psi.UseShellExecute <- false
+
+    //Some env var like `MSBUILD_EXE_PATH` override the msbuild used.
+    //The dotnet cli (`dotnet`) set these when calling child processes, and
+    //is wrong because these override some properties of the called msbuild
+    let msbuildEnvVars =
+        psi.Environment.Keys
+        |> Seq.filter (fun s -> s.StartsWith("msbuild", StringComparison.OrdinalIgnoreCase))
+        |> Seq.toList
+    for msbuildEnvVar in msbuildEnvVars do
+       psi.Environment.Remove(msbuildEnvVar) |> ignore
 
     use p = new System.Diagnostics.Process()
     p.StartInfo <- psi
@@ -105,7 +185,7 @@ let rec private projInfo additionalMSBuildProps file =
             | ProjectParsingSdk.DotnetSdk ->
                 Dotnet.ProjInfo.Inspect.MSBuildExePath.DotnetMsbuild "dotnet"
             | ProjectParsingSdk.VerboseSdk ->
-                Dotnet.ProjInfo.Inspect.MSBuildExePath.Path "msbuild"
+                Dotnet.ProjInfo.Inspect.MSBuildExePath.Path Environment.msbuild
         Dotnet.ProjInfo.Inspect.msbuild msbuildPath runCmd
       let log = ignore
 

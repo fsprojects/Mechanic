@@ -40,18 +40,8 @@ module ProjectFile =
            | _ -> failwith "Could not locate project node in project file"
 
     let loadFromFile fileName =
-        let fi = 
-            try
-                FileInfo fileName
-            with
-            | _ -> failwithf "The project file '%s' is not a correct file path." fileName
-
-        use stream = 
-            try
-                fi.OpenRead()
-            with
-            | exn -> failwithf "Could not load project file '%s'. Message: %s" fileName exn.Message
-
+        let fi = FileInfo fileName
+        use stream = fi.OpenRead()
         loadFromStream fi.FullName stream
 
     let tryLoad fileName =
@@ -94,6 +84,9 @@ module ProjectFile =
         let node = makeNode CompileTag doc
         addAttribute IncludeAttribute fileName node
         
+    let private areEqual (outerXmlA: string) (outerXmlB: string): bool =
+        outerXmlA.Equals(outerXmlB)
+
     let updateProjectFile (sFiles:SourceFile list) (pf:ProjectFile) =
         let rec addCompileNodes files (parent:XmlNode) (doc:XmlDocument) =
             match files with
@@ -107,6 +100,8 @@ module ProjectFile =
             addCompileNodes sFiles parent pf.Document
             |> pf.ProjectNode.AppendChild
 
+        let initialContent = pf.Document.OuterXml
+
         getCompileGroup pf.ProjectNode
         |> function
            | Some x ->
@@ -114,5 +109,7 @@ module ProjectFile =
                addCompileNodes sFiles x pf.Document |> ignore
            | None -> 
                addNewItemGroup sFiles pf |> ignore
-
-        save pf
+        let contentAfterUpdate = pf.Document.OuterXml
+        if areEqual contentAfterUpdate initialContent
+            then ()
+            else save pf

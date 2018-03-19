@@ -40,8 +40,18 @@ module ProjectFile =
            | _ -> failwith "Could not locate project node in project file"
 
     let loadFromFile fileName =
-        let fi = FileInfo fileName
-        use stream = fi.OpenRead()
+        let fi = 
+            try
+                FileInfo fileName
+            with
+            | _ -> failwithf "The project file '%s' is not a correct file path." fileName
+
+        use stream = 
+            try
+                fi.OpenRead()
+            with
+            | exn -> failwithf "Could not load project file '%s'. Message: %s" fileName exn.Message
+
         loadFromStream fi.FullName stream
 
     let tryLoad fileName =

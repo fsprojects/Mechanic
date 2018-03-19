@@ -27,6 +27,8 @@ module ProjectRecognizer =
             getProjectType sr 3
 
 module Environment =
+  open System.Runtime.InteropServices
+  
   let (</>) x (y: string) = Path.Combine(x, y.TrimStart [| '\\'; '/' |])
   let private environVar v = Environment.GetEnvironmentVariable v
 
@@ -77,13 +79,10 @@ module Environment =
         try not << isNull <| Type.GetType "Mono.Runtime"
         with _ -> false
   let msbuild =
-#if SCRIPT_REFS_FROM_MSBUILD
-      if not(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) then
+      if runningOnMono then "xbuild" // mono <= 5.0
+      elif not(RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) then
         //well, depends on mono version, but like this is mono >= 5.2 (msbuild on mono 5.0 sort of works)
         "msbuild"
-#else
-      if runningOnMono then "xbuild" // mono <= 5.0
-#endif
       else
         let MSBuildPath =
             (programFilesX86 </> @"\MSBuild\14.0\Bin") + ";" +

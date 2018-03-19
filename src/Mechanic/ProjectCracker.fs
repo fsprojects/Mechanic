@@ -1,4 +1,5 @@
 /// Copied from https://github.com/fable-compiler/Fable/blob/f8457dc6ff3208af85166a14da0feb520927bc55/src/dotnet/dotnet-fable/ProjectCoreCracker.fs
+/// Verbose SDK changes based on https://github.com/fsharp/FsAutoComplete/blob/master/src/FsAutoComplete.Core/ProjectCrackerDotnetSdk.fs
 module Mechanic.ProjectCracker
 
 open System
@@ -6,7 +7,28 @@ open System.IO
 
 open Microsoft.FSharp.Compiler.SourceCodeServices
 
+module ProjectRecognizer =
+    // This part is from https://github.com/fsharp/FsAutoComplete/blob/ad1b81ae50ad08ae67d856aea602da97dde4186f/src/FsAutoComplete.Core/ProjectCrackerTypes.fs#L67
+    let (|NetCoreProjectJson|NetCoreSdk|Net45|Unsupported|) file =
+        let rec getProjectType (sr:StreamReader) limit =
+            let isNetCore (line:string) = line.ToLower().Contains("sdk=")
+            if limit = 0 then
+                Unsupported // unsupported project type
+            else
+                let line = sr.ReadLine()
+                if not <| line.Contains("ToolsVersion") && not <| line.Contains("Sdk=") then
+                    getProjectType sr (limit-1)
+                else // both net45 and preview3-5 have 'ToolsVersion', > 5 has 'Sdk'
+                    if isNetCore line then NetCoreSdk else Net45
+        if Path.GetExtension file = ".json" then
+            NetCoreProjectJson // dotnet core preview 2 or earlier
+        else
+            use sr = File.OpenText(file)
+            getProjectType sr 3
+
 module MSBuildPrj = Dotnet.ProjInfo.Inspect
+
+type private ProjectParsingSdk = DotnetSdk | VerboseSdk
 
 type NavigateProjectSM =
     | NoCrossTargeting of NoCrossTargetingData
@@ -53,25 +75,51 @@ let private msbuildPropStringList (s: string) =
   | _ -> []
 
 let rec private projInfo additionalMSBuildProps file =
+  let projType =
+      match file with
+      | ProjectRecognizer.NetCoreSdk -> ProjectParsingSdk.DotnetSdk
+      | ProjectRecognizer.Net45 -> ProjectParsingSdk.VerboseSdk
+      | _ -> failwithf "Unsupported type of project %s" file
   let projDir = Path.GetDirectoryName file
   let projectAssetsJsonPath = Path.Combine(projDir, "obj", "project.assets.json")
-  if not(File.Exists(projectAssetsJsonPath)) then
+  if projType = DotnetSdk && not(File.Exists(projectAssetsJsonPath)) then
      failwithf "Cannot find restored info for project %s" file
 
-  let getFscArgs = Dotnet.ProjInfo.Inspect.getFscArgs
+  let getFscArgs = 
+    match projType with
+    | DotnetSdk -> Dotnet.ProjInfo.Inspect.getFscArgs
+    | VerboseSdk -> 
+        let asFscArgs props =
+            let fsc = Microsoft.FSharp.Build.Fsc()
+            Dotnet.ProjInfo.FakeMsbuildTasks.getResponseFileFromTask props fsc
+        Dotnet.ProjInfo.Inspect.getFscArgsOldSdk (asFscArgs >> Ok)
   let getP2PRefs = Dotnet.ProjInfo.Inspect.getResolvedP2PRefs
   let gp () = Dotnet.ProjInfo.Inspect.getProperties (["TargetPath"; "IsCrossTargetingBuild"; "TargetFrameworks"; "TargetFramework"])
 
   let results =
       let runCmd exePath args = runProcess projDir exePath (args |> String.concat " ")
 
-      let msbuildExec = Dotnet.ProjInfo.Inspect.dotnetMsbuild runCmd
+      let msbuildExec =
+        let msbuildPath =
+            match projType with
+            | ProjectParsingSdk.DotnetSdk ->
+                Dotnet.ProjInfo.Inspect.MSBuildExePath.DotnetMsbuild "dotnet"
+            | ProjectParsingSdk.VerboseSdk ->
+                Dotnet.ProjInfo.Inspect.MSBuildExePath.Path "msbuild"
+        Dotnet.ProjInfo.Inspect.msbuild msbuildPath runCmd
       let log = ignore
 
       let additionalArgs = additionalMSBuildProps |> List.map (Dotnet.ProjInfo.Inspect.MSBuild.MSbuildCli.Property)
 
+      let inspect =
+        match projType with
+        | ProjectParsingSdk.DotnetSdk ->
+            Dotnet.ProjInfo.Inspect.getProjectInfos
+        | ProjectParsingSdk.VerboseSdk ->
+            Dotnet.ProjInfo.Inspect.getProjectInfosOldSdk
+
       file
-      |> Dotnet.ProjInfo.Inspect.getProjectInfos log msbuildExec [getFscArgs; getP2PRefs; gp] additionalArgs
+      |> inspect log msbuildExec [getFscArgs; getP2PRefs; gp] additionalArgs
 
   let todo =
       match results with

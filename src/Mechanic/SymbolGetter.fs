@@ -43,7 +43,10 @@ let getExternalFindDefFun projFile =
         if exitCode <> 0 || logOut |> Seq.exists (fun l -> l.Contains "error MSB") then 
             let msg = (sprintf "\"dotnet %s\" failed (exitCode %i) with output:" args exitCode) :: logOut |> String.concat System.Environment.NewLine
             failwith msg
-    runRestore()
+    match projFile with
+    | ProjectCracker.ProjectRecognizer.NetCoreSdk -> runRestore()
+    | _ -> ()
+    
     let (projOpts,_,_) = ProjectCracker.GetProjectOptionsFromProjectFile projFile
     let fscArgs = projOpts.OtherOptions |> Seq.toList
     //fscArgs |> Seq.iter (printfn "%A")

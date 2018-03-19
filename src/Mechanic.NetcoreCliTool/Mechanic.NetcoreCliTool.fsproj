@@ -1,10 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <AssemblyName>mech</AssemblyName>
     <TargetFramework>netcoreapp2.0</TargetFramework>
+    <AssemblyName>dotnet-mechanic</AssemblyName>
+    <PackageId>DotNetMechanic</PackageId>
+    <PackageVersion>0.0.1</PackageVersion>
+    <PackageType>DotnetCliTool</PackageType>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="Program.fs" />
   </ItemGroup>

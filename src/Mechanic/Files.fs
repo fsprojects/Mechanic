@@ -94,6 +94,9 @@ module ProjectFile =
         let node = makeNode CompileTag doc
         addAttribute IncludeAttribute fileName node
         
+    let private areEqual (outerXmlA: string) (outerXmlB: string): bool =
+        outerXmlA.Equals(outerXmlB)
+
     let updateProjectFile (sFiles:SourceFile list) (pf:ProjectFile) =
         let rec addCompileNodes files (parent:XmlNode) (doc:XmlDocument) =
             match files with
@@ -107,6 +110,8 @@ module ProjectFile =
             addCompileNodes sFiles parent pf.Document
             |> pf.ProjectNode.AppendChild
 
+        let initialContent = pf.Document.OuterXml
+
         getCompileGroup pf.ProjectNode
         |> function
            | Some x ->
@@ -114,5 +119,7 @@ module ProjectFile =
                addCompileNodes sFiles x pf.Document |> ignore
            | None -> 
                addNewItemGroup sFiles pf |> ignore
-
-        save pf
+        let contentAfterUpdate = pf.Document.OuterXml
+        if areEqual contentAfterUpdate initialContent
+            then ()
+            else save pf

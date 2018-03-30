@@ -1,4 +1,5 @@
 FSharp.Core
 FSharp.Compiler.Service
 DotNet.ProjInfo
-File: Fsc.fs
+Fake.DotNet.MsBuild
+File:Fsc.fs

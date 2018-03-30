@@ -30,6 +30,13 @@ module Namespace =
         |> Option.defaultValue (l1 @ l2)
         |> joinByDot
 
+module Path =
+    let normalizeDirectorySeparator (path: string) =
+        match System.IO.Path.DirectorySeparatorChar with
+        | '\\' -> path.Replace('/', '\\')
+        | '/' -> path.Replace('\\', '/')
+        | _ -> path
+
 module Shell =
     let runCmd (workingDir: string) (exePath: string) (args: string) =
         let logOut = System.Collections.Concurrent.ConcurrentQueue<string>()

@@ -8,6 +8,7 @@
       <Paket>True</Paket>
       <Link>paket-files/Fsc.fs</Link>
     </Compile>
+    <Compile Include="Options.fs" />
     <Compile Include="Environment.fs" />
     <Compile Include="Xml.fs" />
     <Compile Include="Utils.fs" />

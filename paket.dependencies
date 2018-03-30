@@ -7,6 +7,7 @@ nuget FSharp.Compiler.Service
 nuget Microsoft.NET.Test.Sdk
 nuget Expecto
 nuget Expecto.FsCheck
+nuget Argu
 
 github Microsoft/visualfsharp:Visual-Studio-2017-Version-15.4 src/fsharp/FSharp.Build/Fsc.fs
 

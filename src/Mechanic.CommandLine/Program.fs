@@ -8,6 +8,7 @@ open Mechanic.Options
 type CliArguments =
     | [<MainCommand; Unique>] Project of string
     | Pattern of string * string
+    | Dry_Run
     | Log_Ast_Tree
     | Log_Collected_Symbols
     | Log_File_Dependencies
@@ -18,6 +19,7 @@ with
             match s with
             | Project _ -> "Project file."
             | Pattern _ -> "Alternative to project file - directory and wildcard pattern. Only print out resulting order."
+            | Dry_Run -> "Don't update projecct file."
             | Log_Ast_Tree -> "Print out AST tree for each source file from project."
             | Log_Collected_Symbols -> "Print out collected symbols for each source file from project."
             | Log_File_Dependencies -> "Print out file dependencies in project."
@@ -52,7 +54,7 @@ let main argv =
             |> SymbolGraph.solveOrder options (fun f -> f.FullName) (Some projFile)
             |> function
                 | TopologicalOrderResult.TopologicalOrder xs ->
-                    xs |> fun x -> ProjectFile.updateProjectFile x p 
+                    if (not <| opts.Contains Dry_Run) then xs |> fun x -> ProjectFile.updateProjectFile x p 
                     TopologicalOrderResult.TopologicalOrder (xs |> List.map (fun f -> f.FullName))
                 | TopologicalOrderResult.Cycle xs -> TopologicalOrderResult.Cycle (xs |> List.map (fun f -> f.FullName))
             |> printfn "%A"

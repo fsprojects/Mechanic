@@ -19,6 +19,7 @@ type SourceFile = {
 
 module ProjectFile =
 
+    open Mechanic.Utils
     open Mechanic.Xml
 
     let [<Literal>] ProjectTag       = "Project"
@@ -82,7 +83,7 @@ module ProjectFile =
         let projectDir = FileInfo(pf.FileName).Directory.FullName
         parseSourceFileNames pf.ProjectNode
         |> List.map (fun (xml,x) ->
-            let fi = FileInfo (Path.Combine(projectDir, x))
+            let fi = FileInfo (Path.Combine(projectDir, x) |> Path.normalizeDirectorySeparator)
             { FullName  = fi.FullName
               ShortName = x 
               XmlNode = xml})

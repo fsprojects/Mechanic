@@ -18,8 +18,8 @@ with
         member s.Usage =
             match s with
             | Project _ -> "Project file."
-            | Pattern _ -> "Alternative to project file - directory and wildcard pattern. Only print out resulting order."
-            | Dry_Run -> "Don't update projecct file."
+            | Pattern _ -> "Alternative to project file - specify directory and wildcard pattern. Only print out resulting order."
+            | Dry_Run -> "Don't update project file."
             | Log_Ast_Tree -> "Print out AST tree for each source file from project."
             | Log_Collected_Symbols -> "Print out collected symbols for each source file from project."
             | Log_File_Dependencies -> "Print out file dependencies in project."

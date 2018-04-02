@@ -1,5 +1,10 @@
 module Mechanic.Utils
 
+let memoize (f: 'a -> 'b) =
+    let cache = System.Collections.Concurrent.ConcurrentDictionary<_, _>(HashIdentity.Structural)
+    fun x ->
+        cache.GetOrAdd(x, lazy (f x)).Force()
+
 module List =
     let rec internal distribute e = function
       | [] -> [[e]]
@@ -8,6 +13,16 @@ module List =
     let rec allPermutations = function
       | [] -> [[]]
       | e::xs -> List.collect (distribute e) (allPermutations xs)
+
+    let swapPairAtIndex i xs =
+        match List.skip i xs with
+        | x :: y :: rest -> (List.take i xs) @ (y :: x :: rest)
+        | rest -> (List.take i xs) @ rest
+
+    let rec moveItemAtIndexBy i n xs =
+        if n > 0 then moveItemAtIndexBy (i+1) (n-1) (swapPairAtIndex i xs)
+        elif n < 0 && i > 0 then moveItemAtIndexBy (i-1) (n+1) (swapPairAtIndex (i-1) xs)
+        else xs
 
 module Namespace =
     let splitByDot (s:string) = 

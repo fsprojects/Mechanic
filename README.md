@@ -57,6 +57,8 @@ Advanced usage:
         --pattern <string> <string>
                             Alternative to project file - specify directory and wildcard pattern. Only print out resulting order.
         --dry-run             Don't update project file.
+        --shuffle-test        Do extensive testing of the correctness of Mechanic on given project.
+                              Tries varoius order of source files and check Mechanic result by compiler.
         --log-ast-tree        Print out AST tree for each source file from project.
         --log-collected-symbols
                             Print out collected symbols for each source file from project.

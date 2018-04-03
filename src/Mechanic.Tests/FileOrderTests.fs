@@ -5,6 +5,8 @@ open Mechanic
 open Mechanic.GraphAlg
 open System.IO
 
+let options = { LogOutput = Options.LogOutput.Default }
+
 let makeTempProjectFromTemplate templatePath sources = 
     let projectFileText files = 
         let items = files |> List.map (sprintf """<Compile Include="%s" />""") |> String.concat System.Environment.NewLine
@@ -31,11 +33,11 @@ let withProjectTemplates sources f =
 
 let expectOrder sources =
     withProjectTemplates sources <| fun (_, projFile, files) ->
-        Expect.equal (SymbolGraph.solveOrder id (Some projFile) files) (TopologicalOrder files) "Wrong order of files"
+        Expect.equal (SymbolGraph.solveOrder options id (Some projFile) files) (TopologicalOrder files) "Wrong order of files"
 
 let checkCycle sources expectF =
     withProjectTemplates sources <| fun (_, projFile, files) ->
-        match SymbolGraph.solveOrder id (Some projFile) files with
+        match SymbolGraph.solveOrder options id (Some projFile) files with
         | Cycle _ -> expectF true
         | _ -> expectF false
 
@@ -47,7 +49,7 @@ let expectNotCycle sources =
 
 let expectDependencyHelper useExternalDeps sources expectedDeps =
     withProjectTemplates sources <| fun (_, projFile, files) ->
-        let deps = Mechanic.SymbolGraph.getDependencies files (if useExternalDeps then Some projFile else None)
+        let deps = Mechanic.SymbolGraph.getDependencies options files (if useExternalDeps then Some projFile else None)
         Expect.sequenceEqual 
             (deps |> List.map (fun (a,b,_) -> a,b) |> List.sort) 
             (expectedDeps |> List.map (fun (i,j) -> List.item (i-1) files, List.item (j-1) files) |> List.sort)

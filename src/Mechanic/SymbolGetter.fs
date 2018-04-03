@@ -17,14 +17,15 @@ let parseSingleFile (file, input) =
 
     parseFileResults
 
-let getSymbols file =
+let getSymbols options file =
     if not (System.IO.File.Exists file) then
         failwithf "The file %s does not exist." file
 
     let input = System.IO.File.ReadAllText file 
     let parseFileResults = parseSingleFile(file, input)
     let tree = parseFileResults.ParseTree.Value
-    // printfn "%A" tree
+    if options.LogOutput.AstTree then
+        printfn "%A" tree
 
     let defs = AstSymbolCollector.getDefSymbols tree
     let opens = AstSymbolCollector.getOpenDecls defs tree

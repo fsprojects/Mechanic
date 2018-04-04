@@ -9,6 +9,7 @@ type CliArguments =
     | [<MainCommand; Unique>] Project of string
     | Pattern of string * string
     | Dry_Run
+    | Shuffle_Test
     | Log_Ast_Tree
     | Log_Collected_Symbols
     | Log_File_Dependencies
@@ -20,6 +21,8 @@ with
             | Project _ -> "Project file."
             | Pattern _ -> "Alternative to project file - specify directory and wildcard pattern. Only print out resulting order."
             | Dry_Run -> "Don't update project file."
+            | Shuffle_Test -> "Do extensive testing of the correctness of Mechanic on given project. 
+Tries varoius order of source files and check Mechanic result by compiler."
             | Log_Ast_Tree -> "Print out AST tree for each source file from project."
             | Log_Collected_Symbols -> "Print out collected symbols for each source file from project."
             | Log_File_Dependencies -> "Print out file dependencies in project."
@@ -27,6 +30,8 @@ with
 
 let (|ProjectArg|_|) = (fun (opts: ParseResults<CliArguments>) -> opts.TryGetResult Project)
 let (|PatternArg|_|) = (fun (opts: ParseResults<CliArguments>) -> opts.TryGetResult Pattern)
+let (|ShuffleTestArg|_|) = (fun (opts: ParseResults<CliArguments>) -> 
+    opts.TryGetResult Project |> Option.bind (fun p -> if opts.Contains Shuffle_Test then Some p else None))
 
 [<EntryPoint>]
 let main argv =
@@ -48,6 +53,9 @@ let main argv =
                    FileDependenciesWithSymbols = opts.Contains Log_File_Dependencies_With_Symbols
                 } }
         match opts with
+        | ShuffleTestArg projFile ->
+            let p = ProjectFile.loadFromFile projFile
+            ProjectFile.getSourceFiles p |> SymbolGraph.shuffleTest options (fun f -> f.FullName) projFile |> ignore
         | ProjectArg projFile ->
             let p = ProjectFile.loadFromFile projFile
             p |> ProjectFile.getSourceFiles

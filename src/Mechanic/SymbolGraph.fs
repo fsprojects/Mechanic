@@ -78,3 +78,32 @@ let solveOrder (options: Mechanic.Options) fileNameSelector maybeProjFile xs =
 let solveOrderFromPattern options root filePattern =
     Directory.EnumerateFiles(root,filePattern) |> Seq.toList
     |> solveOrder options id None
+
+let shuffleTest (options: Mechanic.Options) fileNameSelector projFile xs =
+    let printSeq label xs =
+        printfn "%s" label
+        xs |> Seq.iter (printfn "%A")
+    let sourceFiles = xs |> Seq.map fileNameSelector
+    if not (Seq.isEmpty (Mechanic.SymbolGetter.checkWithFsc projFile sourceFiles)) then
+        printfn "Original order of project %s is not valid." projFile
+        false
+    else
+    let n = Seq.length xs
+    [0..n-1] |> Seq.forall (fun i ->
+        ([i-1..-1..0] @ [i+1..n-1]) |> List.forall (fun j ->
+            let ys = List.moveItemAtIndexBy i (j-i) xs
+            printfn "Shuffle test: %s(%i) moved by %i." (Seq.map fileNameSelector xs |> Seq.item i) i (j-i)
+            match solveOrder options fileNameSelector (Some projFile) (Seq.toList ys) with
+            | TopologicalOrderResult.TopologicalOrder result ->
+                let sourceFiles = result |> List.map fileNameSelector
+                let errors = Mechanic.SymbolGetter.checkWithFsc projFile sourceFiles
+                if not (Seq.isEmpty errors) then 
+                    printfn "Mechanic outputs invalid order of project %s:" projFile
+                    printSeq "Tested order:" (Seq.map fileNameSelector ys) 
+                    printSeq "Resulting order:" sourceFiles
+                    printSeq "Errors:" errors
+                    false
+                else true
+            | TopologicalOrderResult.Cycle _ -> true
+        )
+    )

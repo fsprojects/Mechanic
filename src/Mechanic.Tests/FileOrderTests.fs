@@ -341,32 +341,6 @@ let expectDependency sources expectedDeps = expectDependencyHelper false sources
             expectDependency [source1; source2] [1,2]
         }
 
-        test "class const member usage" {
-            let source1 = """module M
-            type T() =
-                member __.X = 42
-            let t = T()
-        """
-            let source2 = """module M2
-            open M
-            let y = t.X
-        """
-            expectDependency [source1; source2] [1,2]
-        }
-
-        test "class member usage" {
-            let source1 = """module M
-            type T() =
-                member __.X() = 42
-            let t = T()
-        """
-            let source2 = """module M2
-            open M
-            let y = t.X()
-        """
-            expectDependency [source1; source2] [1,2]
-        }
-
         test "union case" {
             let source1 = """module M
             type DU = A | B

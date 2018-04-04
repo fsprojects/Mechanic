@@ -90,9 +90,9 @@ let shuffleTest (options: Mechanic.Options) fileNameSelector projFile xs =
     else
     let n = Seq.length xs
     [0..n-1] |> Seq.forall (fun i ->
-        ([0..i-1] @ [i+1..n-1]) |> List.forall (fun j ->
+        ([i-1..-1..0] @ [i+1..n-1]) |> List.forall (fun j ->
             let ys = List.moveItemAtIndexBy i (j-i) xs
-            printfn "Shuffle test: %s moved by %i." (Seq.map fileNameSelector xs |> Seq.item i) (j-i)
+            printfn "Shuffle test: %s(%i) moved by %i." (Seq.map fileNameSelector xs |> Seq.item i) i (j-i)
             match solveOrder options fileNameSelector (Some projFile) (Seq.toList ys) with
             | TopologicalOrderResult.TopologicalOrder result ->
                 let sourceFiles = result |> List.map fileNameSelector

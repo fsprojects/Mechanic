@@ -305,6 +305,42 @@ let expectDependency sources expectedDeps = expectDependencyHelper false sources
             expectDependency [source1; source2] [1,2]
         }
 
+        test "record field usage" {
+            let source1 = """module M
+            type R = { x: int }
+            let r = { x = 42 }
+        """
+            let source2 = """module M2
+            open M
+            let y = r.x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "record field usage 2" {
+            let source1 = """module M
+            type R = { x: int }
+        """
+            let source2 = """module M2
+            open M
+            let y r = r.x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "record in record field usage" {
+            let source1 = """module M
+            module MR = type R = { x: int }
+            open MR
+            type S = { r: R }
+        """
+            let source2 = """module M2
+            open M
+            let y s = s.r.x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
         test "union case" {
             let source1 = """module M
             type DU = A | B

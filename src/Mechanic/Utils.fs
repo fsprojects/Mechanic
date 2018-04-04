@@ -29,8 +29,16 @@ module Namespace =
         s.Split('.') |> Array.filter (System.String.IsNullOrEmpty >> not) |> Array.toList
         |> function | [] -> [""] | x -> x
     let joinByDot xs = xs |> List.filter (fun s -> String.length s > 0) |> String.concat "."
+    let firstPart = splitByDot >> List.head
     let lastPart = splitByDot >> List.last
+    let removeFirstPart s = s |> splitByDot |> (function | [] -> [] | _::xs -> xs) |> joinByDot
     let removeLastPart s = s |> splitByDot |> (fun xs -> xs |> List.take (List.length xs - 1)) |> joinByDot
+    let rec getAllPrefixes = function
+        | "" -> []
+        | s -> let s' = removeLastPart s in s' :: getAllPrefixes s'
+    let rec getAllSuffixes = function
+        | "" -> []
+        | s -> let s' = removeFirstPart s in s' :: getAllSuffixes s'
     let rec merge n1 n2 =
         let l1 = splitByDot n1
         let l2 = splitByDot n2

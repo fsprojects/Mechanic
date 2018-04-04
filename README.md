@@ -43,7 +43,29 @@ Usually programmers already have a working state and perform changes to it. Thes
 
 In order to test the tool you can clone the repo and run the following command:
 
-     dotnet run -p src/Mechanic.CommandLine [path/to/a/project] *.fs
+     dotnet run -p src/Mechanic.CommandLine [path/to/a/projectfile.fsproj]
+
+Advanced usage:
+    
+    USAGE: [--help] [--pattern <string> <string>] [--dry-run] [--log-ast-tree] [--log-collected-symbols] [--log-file-dependencies]
+              [--log-file-dependencies-with-symbols] [<string>]
+
+    <string>              Project file.
+
+    OPTIONS:
+
+        --pattern <string> <string>
+                            Alternative to project file - specify directory and wildcard pattern. Only print out resulting order.
+        --dry-run             Don't update project file.
+        --shuffle-test        Do extensive testing of the correctness of Mechanic on given project.
+                              Tries varoius order of source files and check Mechanic result by compiler.
+        --log-ast-tree        Print out AST tree for each source file from project.
+        --log-collected-symbols
+                            Print out collected symbols for each source file from project.
+        --log-file-dependencies
+                            Print out file dependencies in project.
+        --log-file-dependencies-with-symbols
+                            Print out file dependencies (with depended symbols) in project.
 
 ## Tools
 

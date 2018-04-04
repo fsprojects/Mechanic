@@ -1,5 +1,10 @@
 module Mechanic.Utils
 
+let memoize (f: 'a -> 'b) =
+    let cache = System.Collections.Concurrent.ConcurrentDictionary<_, _>(HashIdentity.Structural)
+    fun x ->
+        cache.GetOrAdd(x, lazy (f x)).Force()
+
 module List =
     let rec internal distribute e = function
       | [] -> [[e]]
@@ -9,13 +14,31 @@ module List =
       | [] -> [[]]
       | e::xs -> List.collect (distribute e) (allPermutations xs)
 
+    let swapPairAtIndex i xs =
+        match List.skip i xs with
+        | x :: y :: rest -> (List.take i xs) @ (y :: x :: rest)
+        | rest -> (List.take i xs) @ rest
+
+    let rec moveItemAtIndexBy i n xs =
+        if n > 0 then moveItemAtIndexBy (i+1) (n-1) (swapPairAtIndex i xs)
+        elif n < 0 && i > 0 then moveItemAtIndexBy (i-1) (n+1) (swapPairAtIndex (i-1) xs)
+        else xs
+
 module Namespace =
     let splitByDot (s:string) = 
         s.Split('.') |> Array.filter (System.String.IsNullOrEmpty >> not) |> Array.toList
         |> function | [] -> [""] | x -> x
     let joinByDot xs = xs |> List.filter (fun s -> String.length s > 0) |> String.concat "."
+    let firstPart = splitByDot >> List.head
     let lastPart = splitByDot >> List.last
+    let removeFirstPart s = s |> splitByDot |> (function | [] -> [] | _::xs -> xs) |> joinByDot
     let removeLastPart s = s |> splitByDot |> (fun xs -> xs |> List.take (List.length xs - 1)) |> joinByDot
+    let rec getAllPrefixes = function
+        | "" -> []
+        | s -> let s' = removeLastPart s in s' :: getAllPrefixes s'
+    let rec getAllSuffixes = function
+        | "" -> []
+        | s -> let s' = removeFirstPart s in s' :: getAllSuffixes s'
     let rec merge n1 n2 =
         let l1 = splitByDot n1
         let l2 = splitByDot n2

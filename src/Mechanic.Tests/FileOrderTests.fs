@@ -5,6 +5,8 @@ open Mechanic
 open Mechanic.GraphAlg
 open System.IO
 
+let options = { LogOutput = Options.LogOutput.Default }
+
 let makeTempProjectFromTemplate templatePath sources = 
     let projectFileText files = 
         let items = files |> List.map (sprintf """<Compile Include="%s" />""") |> String.concat System.Environment.NewLine
@@ -31,11 +33,11 @@ let withProjectTemplates sources f =
 
 let expectOrder sources =
     withProjectTemplates sources <| fun (_, projFile, files) ->
-        Expect.equal (SymbolGraph.solveOrder id (Some projFile) files) (TopologicalOrder files) "Wrong order of files"
+        Expect.equal (SymbolGraph.solveOrder options id (Some projFile) files) (TopologicalOrder files) "Wrong order of files"
 
 let checkCycle sources expectF =
     withProjectTemplates sources <| fun (_, projFile, files) ->
-        match SymbolGraph.solveOrder id (Some projFile) files with
+        match SymbolGraph.solveOrder options id (Some projFile) files with
         | Cycle _ -> expectF true
         | _ -> expectF false
 
@@ -47,7 +49,7 @@ let expectNotCycle sources =
 
 let expectDependencyHelper useExternalDeps sources expectedDeps =
     withProjectTemplates sources <| fun (_, projFile, files) ->
-        let deps = Mechanic.SymbolGraph.getDependencies files (if useExternalDeps then Some projFile else None)
+        let deps = Mechanic.SymbolGraph.getDependencies options files (if useExternalDeps then Some projFile else None)
         Expect.sequenceEqual 
             (deps |> List.map (fun (a,b,_) -> a,b) |> List.sort) 
             (expectedDeps |> List.map (fun (i,j) -> List.item (i-1) files, List.item (j-1) files) |> List.sort)
@@ -299,6 +301,42 @@ let expectDependency sources expectedDeps = expectDependencyHelper false sources
             let source2 = """module M2
             open M
             let y = { x = 42 }
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "record field usage" {
+            let source1 = """module M
+            type R = { x: int }
+            let r = { x = 42 }
+        """
+            let source2 = """module M2
+            open M
+            let y = r.x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "record field usage 2" {
+            let source1 = """module M
+            type R = { x: int }
+        """
+            let source2 = """module M2
+            open M
+            let y r = r.x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "record in record field usage" {
+            let source1 = """module M
+            module MR = type R = { x: int }
+            open MR
+            type S = { r: R }
+        """
+            let source2 = """module M2
+            open M
+            let y s = s.r.x
         """
             expectDependency [source1; source2] [1,2]
         }

@@ -34,11 +34,12 @@ let main argv =
             | _ -> Seq.empty
 
     let solve (n, m) projectFile =
+        let options = { LogOutput = Options.LogOutput.Default }
         printfn "Project %s" projectFile.FileName
 
         projectFile
         |> ProjectFile.getSourceFiles
-        |> SymbolGraph.solveOrder (fun f -> f.FullName) (Some projectFile.FileName)
+        |> SymbolGraph.solveOrder options (fun f -> f.FullName) (Some projectFile.FileName)
         |> function
             | TopologicalOrderResult.TopologicalOrder xs ->
                 ProjectFile.updateProjectFile xs projectFile

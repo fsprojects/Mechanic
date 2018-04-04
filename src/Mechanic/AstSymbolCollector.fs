@@ -195,7 +195,12 @@ let getUsedSymbols (tree: ParsedInput) =
         override __.VisitExpr(path, subExprF, defF, e) =
             match e with
             | SynExpr.Ident(id) -> xs <- mkUse (Identificator id.idText) id.idRange :: xs; defF e
-            | SynExpr.LongIdent(_, LongIdentWithDots(lId,_), _, r) -> xs <- mkUse (Identificator(visitLongIdent lId)) r :: xs; defF e
+            | SynExpr.LongIdent(_, LongIdentWithDots(lId,_), _, r) -> 
+                let ident = visitLongIdent lId
+                xs <- mkUse (Identificator ident) r  :: xs
+                Namespace.getAllPrefixes ident |> Seq.iter (fun x -> xs <- mkUse (Identificator x) r :: xs)
+                Namespace.getAllSuffixes ident |> Seq.map Namespace.firstPart |> Seq.iter (fun x -> xs <- mkUse (RecordField x) r :: xs)
+                defF e
             | _ -> defF e
         override __.VisitLetOrUse(path, bindings, range) = 
             xs <- xs @ (bindings |> List.collect (getBinding path range))

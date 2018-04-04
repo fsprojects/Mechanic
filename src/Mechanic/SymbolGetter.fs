@@ -17,14 +17,15 @@ let parseSingleFile (file, input) =
 
     parseFileResults
 
-let getSymbols file =
+let getSymbols options file =
     if not (System.IO.File.Exists file) then
         failwithf "The file %s does not exist." file
 
     let input = System.IO.File.ReadAllText file 
     let parseFileResults = parseSingleFile(file, input)
     let tree = parseFileResults.ParseTree.Value
-    // printfn "%A" tree
+    if options.LogOutput.AstTree then
+        printfn "%A" tree
 
     let defs = AstSymbolCollector.getDefSymbols tree
     let opens = AstSymbolCollector.getOpenDecls defs tree
@@ -36,19 +37,7 @@ let getSymbols file =
     file, defSymbolNames, opens
 
 let getExternalFindDefFun projFile =
-    let projFile = (FileInfo projFile).FullName
-    let runRestore() =
-        let args = (sprintf "restore %s" projFile)
-        let (exitCode, logOut) = Utils.Shell.runCmd "." "dotnet" args
-        if exitCode <> 0 || logOut |> Seq.exists (fun l -> l.Contains "error MSB") then 
-            let msg = (sprintf "\"dotnet %s\" failed (exitCode %i) with output:" args exitCode) :: logOut |> String.concat System.Environment.NewLine
-            failwith msg
-    match projFile with
-    | ProjectCracker.ProjectRecognizer.NetCoreSdk -> runRestore()
-    | _ -> ()
-    
-    let (projOpts,_,_) = ProjectCracker.GetProjectOptionsFromProjectFile projFile
-    let fscArgs = projOpts.OtherOptions |> Seq.toList
+    let fscArgs = ProjectInfo.getFscArgs projFile
     //fscArgs |> Seq.iter (printfn "%A")
     
     let mkTempFile content =
@@ -65,3 +54,14 @@ let foo = 42"""
     // printfn "%A" wholeProjectResults.Errors
     let assemblies = wholeProjectResults.ProjectContext.GetReferencedAssemblies()
     fun x -> assemblies |> List.tryPick (fun a -> a.Contents.FindEntityByPath (Symbol.get x |> Utils.Namespace.splitByDot)  |> Option.map (fun _ -> x))
+
+let checkWithFsc projFile sourceFiles =
+    let fscArgs = ProjectInfo.getFscArgs projFile
+    let fscArgs = fscArgs @ (Seq.toList sourceFiles)
+    //fscArgs |> Seq.iter (printfn "%s")
+    let projOpts = checker.GetProjectOptionsFromCommandLineArgs(projFile, fscArgs |> List.toArray)
+    let wholeProjectResults = checker.ParseAndCheckProject(projOpts) |> Async.RunSynchronously
+    let errors = wholeProjectResults.Errors |> Array.filter (fun e -> e.Severity = FSharpErrorSeverity.Error)
+    // if errors |> Seq.isEmpty |> not then
+    //     printfn "%A" errors
+    errors

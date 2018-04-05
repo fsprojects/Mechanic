@@ -35,6 +35,9 @@ let defSetRange range = function
     | Def { SymbolName = s } -> Def { SymbolName = s; LocalRange = range }
     | Use x -> Use x
 let mkUse symbol range = Use { SymbolName = symbol; Range = range }
+let defToUse defaultRange = function
+    | Def s -> Use { SymbolName = s.SymbolName; Range = s.LocalRange |> Option.defaultValue defaultRange }
+    | Use s -> Use s
 
 let filterDefs xs = xs |> List.choose (function | Def x -> Some x | Use _ -> None)
 let filterUses xs = xs |> List.choose (function | Use x -> Some x | Def _ -> None)
@@ -219,6 +222,9 @@ let getUsedSymbols (tree: ParsedInput) =
             ident |> Option.iter (fun (LongIdentWithDots(ident, _)) ->
                 xs <- xs @ [mkUse (RecordField(visitLongIdent ident)) range])
             None
+        override __.VisitMatchClause(defF, Clause(pat, _, _, range, _)) =
+            xs <- (visitPattern range pat |> List.map (defToUse range)) @ xs
+            None        
         override __.VisitComponentInfo(path, _) =
             let types = path |> getTypeDefnFromPath |> Option.map getSymbolsFromTypeDefn |> Option.defaultValue []
             xs <- xs @ types; None

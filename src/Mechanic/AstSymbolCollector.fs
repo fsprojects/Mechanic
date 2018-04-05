@@ -154,6 +154,14 @@ let getBinding path localRange x =
                 getBind localRange [x] |> List.map (defToLocal <| Range.mkRange r.FileName x.RangeOfHeadPat.Start r.End)) |> Option.defaultValue []
         | _ -> getBind localRange [x]
 
+let extractActivePatterns = function
+    | Def ({ SymbolName = Identificator ident } as symbol) ->
+        ident |> Namespace.splitByDot |> List.map (fun s ->
+            if s.StartsWith "|" && s.EndsWith "|" then s.Split [|'|'|] |> Seq.filter (fun x -> x <> "_" && x <> "") |> Seq.toList
+            else [s])
+        |> List.cartesianMult |> List.map (fun x -> Def { symbol with SymbolName = Identificator (Namespace.joinByDot x) })
+    | x -> [x]
+
 let getDefSymbols (tree: ParsedInput) =
     let mutable xs = []
 
@@ -185,7 +193,7 @@ let getDefSymbols (tree: ParsedInput) =
             None
         }
     Traverse(tree, visitor) |> ignore
-    let defs = xs |> filterDefs
+    let defs = xs |> List.collect extractActivePatterns |> filterDefs 
     //printfn "Defs: %A" defs
     defs
 

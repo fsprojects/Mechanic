@@ -63,16 +63,18 @@ let getTypesUse synType = getTypes synType |> List.map (fun (x,r) -> mkUse x r)
 let getTypesDef synType = getTypes synType |> List.map (fun (x,_) -> mkDef x)
 
 let rec getSynConstructorArgs localRange = function
-    | SynConstructorArgs.Pats ps -> ps |> List.collect (visitPattern localRange)
-    | SynConstructorArgs.NamePatPairs (ps, _) -> ps |> List.map snd |> List.collect (visitPattern localRange)
+    | SynConstructorArgs.Pats ps -> ps |> List.collect (visitPattern' true localRange)
+    | SynConstructorArgs.NamePatPairs (ps, _) -> ps |> List.map snd |> List.collect (visitPattern' true localRange)
 
-and visitPattern localRange = function
+and visitPattern' isUse localRange x = 
+    let visitPattern = visitPattern' isUse
+    match x with
     | SynPat.Named(SynPat.Wild(_), name, _, _, range) -> [mkDef <| Identificator name.idText]
     | SynPat.OptionalVal(name, range)
     | SynPat.Named(_, name, _, _, range) -> [mkDef <| Identificator name.idText]
     | SynPat.LongIdent(LongIdentWithDots(ident, _), _, _, args, _, range) -> 
         (getSynConstructorArgs localRange args |> List.map (defToLocal localRange))
-        @ [mkDef <| Identificator (visitLongIdent ident)]
+        @ if isUse then [mkUse (Identificator (visitLongIdent ident)) range] else [mkDef <| Identificator (visitLongIdent ident)]
     | SynPat.Typed(p, typ, _) -> visitPattern localRange p @ getTypesUse typ
     | SynPat.Paren(p, _) -> visitPattern localRange p
     | SynPat.Ands(ps, _)
@@ -80,6 +82,8 @@ and visitPattern localRange = function
     | SynPat.Tuple(ps, _) -> ps |> List.collect (visitPattern localRange)
     | SynPat.Or(p1, p2, _) -> visitPattern localRange p1 @ visitPattern localRange p2
     | _ -> []
+
+let visitPattern = visitPattern' false
 
 let rec visitSimplePattern localRange = function
     | SynSimplePat.Id(ident, _, _, _, _, range) -> [mkLocalDef (Identificator ident.idText) localRange]

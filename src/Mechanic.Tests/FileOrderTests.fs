@@ -5,8 +5,7 @@ open Mechanic
 open Mechanic.GraphAlg
 open System.IO
 
-//let options = { LogOutput = Options.LogOutput.Default }
-let options = { LogOutput = { Options.LogOutput.Default with AstTree = true } }
+let options = { LogOutput = Options.LogOutput.Default }
 
 let makeTempProjectFromTemplate templatePath sources = 
     let projectFileText files = 

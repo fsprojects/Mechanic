@@ -5,7 +5,8 @@ open Mechanic
 open Mechanic.GraphAlg
 open System.IO
 
-let options = { LogOutput = Options.LogOutput.Default }
+//let options = { LogOutput =  { Options.LogOutput.Default with AstTree = true } }
+let options = { LogOutput =  { Options.LogOutput.Default with AstTree = false } }
 
 let makeTempProjectFromTemplate templatePath sources = 
     let projectFileText files = 
@@ -368,6 +369,17 @@ let expectDependency sources expectedDeps = expectDependencyHelper false sources
             expectDependency [source1; source2] [1,2]
         }
 
+        test "union case - parameter" {
+            let source1 = """module M
+            type DU = A | B
+        """
+            let source2 = """module M2
+            open M
+            let f A = true
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
         test "type in record" {
             let source1 = """module M
             type DU = A | B
@@ -719,6 +731,17 @@ let expectDependency sources expectedDeps = expectDependencyHelper false sources
             let source2 = """module M2
             open M
             let y = match 42 with | Even -> true | Odd -> false
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "active pattern 3" {
+            let source1 = """module M
+            let (|Positive|_|) x = if x > 0 then Some x else None
+        """
+            let source2 = """module M2
+            open M
+            let f (Positive(x)) = true
         """
             expectDependency [source1; source2] [1,2]
         }

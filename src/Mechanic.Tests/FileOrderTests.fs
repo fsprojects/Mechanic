@@ -31,6 +31,11 @@ let withProjectTemplates sources f =
     ]
     templates |> Seq.iter (fun t -> makeTempProjectFromTemplate t sources |> f)
 
+let checkByFsc projFile files =
+    let errors = SymbolGetter.checkWithFsc projFile files
+    errors |> Seq.iter (printfn "%A")
+    Expect.isEmpty errors "Compiler errors in test."
+
 let expectOrder sources =
     withProjectTemplates sources <| fun (_, projFile, files) ->
         Expect.equal (SymbolGraph.solveOrder options id (Some projFile) files) (TopologicalOrder files) "Wrong order of files"
@@ -683,7 +688,28 @@ let expectDependency sources expectedDeps = expectDependencyHelper false sources
                 let y = x
         """
             expectDependency [source1; source2; source3] [2,3]
-            
+        }
+
+        test "active pattern 1" {
+            let source1 = """module M
+            let (|Positive|_|) x = if x > 0 then Some x else None
+        """
+            let source2 = """module M2
+            open M
+            let y = match 42 with | Positive _ -> true | _ -> false
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
+        test "active pattern 2" {
+            let source1 = """module M
+            let (|Odd|Even|) x = if x % 2 = 0 then Even else Odd
+        """
+            let source2 = """module M2
+            open M
+            let y = match 42 with | Even -> true | Odd -> false
+        """
+            expectDependency [source1; source2] [1,2]
         }
 
         test "external deps 1" {

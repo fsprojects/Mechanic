@@ -5,7 +5,7 @@ open Mechanic
 open Mechanic.GraphAlg
 open System.IO
 
-//let options = { LogOutput =  { Options.LogOutput.Default with AstTree = true } }
+//let options = { LogOutput =  { Options.LogOutput.Default with AstTree = true; CollectedSymbols = true } }
 let options = { LogOutput =  { Options.LogOutput.Default with AstTree = false } }
 
 let makeTempProjectFromTemplate templatePath sources = 
@@ -507,6 +507,21 @@ let expectDependency sources expectedDeps = expectDependencyHelper false sources
             let y = x
         """
             expectDependency [source1; source2; source3] [2,3]
+        }
+
+        test "let-pattern clash" {
+            let source1 = """module M
+            type DU = A | B
+        """
+            let source2 = """module M2
+            let A = 42
+        """
+            let source3 = """module M3
+            open M
+            open M2
+            let f A = 42
+        """
+            expectDependency [source1; source2; source3] [1,3]
         }
 
         test "file order shadowing test 1" {

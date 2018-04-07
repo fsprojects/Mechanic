@@ -8,12 +8,14 @@ type Symbol =
     | Identificator of string
     | RecordField of string
     | TypeSymbol of string
+    | Pattern of string
 module Symbol = 
-    let get x = match x with |Identificator s -> s |RecordField s -> s |TypeSymbol s -> s
+    let get x = match x with |Identificator s -> s |RecordField s -> s |TypeSymbol s -> s |Pattern s -> s
     let map f = function
         | Identificator s -> Identificator (f s)
         | RecordField s -> RecordField (f s)
         | TypeSymbol s -> TypeSymbol (f s)
+        | Pattern s -> Pattern (f s)
 
 type SymbolDef = { SymbolName: Symbol; LocalRange: Range.range option }
 type SymbolUse = { SymbolName: Symbol; Range: Range.range }
@@ -115,7 +117,7 @@ let getSymbolsFromTypeDefn (SynTypeDefn.TypeDefn(SynComponentInfo.ComponentInfo 
                         | SynUnionCaseType.UnionCaseFields fields ->
                             fields |> List.collect (function 
                                 SynField.Field(_,_,_, synType,_,_,_, _) -> getTypesUse synType)
-                    mkDef (Identificator ident.idText) :: types)
+                    mkDef (Pattern ident.idText) :: mkDef (Identificator ident.idText) :: types)
         | _ -> []
     | SynTypeDefnRepr.ObjectModel (_kind, members, _range) ->
         members |> List.collect (function 
@@ -161,12 +163,16 @@ let getBinding path localRange x =
                 getBind localRange [x] |> List.map (defToLocal <| Range.mkRange r.FileName x.RangeOfHeadPat.Start r.End)) |> Option.defaultValue []
         | _ -> getBind localRange [x]
 
-let extractActivePatterns = function
+let extractActivePatterns = 
+    let isActivePattern (s: string) = s.StartsWith "|" && s.EndsWith "|"
+    function
     | Def ({ SymbolName = Identificator ident } as symbol) ->
-        ident |> Namespace.splitByDot |> List.map (fun s ->
-            if s.StartsWith "|" && s.EndsWith "|" then s.Split [|'|'|] |> Seq.filter (fun x -> x <> "_" && x <> "") |> Seq.toList
-            else [s])
-        |> List.cartesianMult |> List.map (fun x -> Def { symbol with SymbolName = Identificator (Namespace.joinByDot x) })
+        let prefix = ident |> Namespace.removeLastPart
+        ident |> Namespace.lastPart |> (fun s ->
+            if isActivePattern s then Some (s.Split [|'|'|] |> Seq.filter (fun x -> x <> "_" && x <> "") |> Seq.toList)
+            else None)
+        |> Option.map (List.map (fun x -> Def { symbol with SymbolName = Pattern (Namespace.joinByDot [prefix; x]) }))
+        |> Option.defaultValue [Def symbol]
     | x -> [x]
 
 let getDefSymbols (tree: ParsedInput) =

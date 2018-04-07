@@ -713,6 +713,19 @@ let expectDependency sources expectedDeps = expectDependencyHelper false sources
             expectDependency [source1; source2; source3] [2,3]
         }
 
+        test "autoopen 2" {
+            let source1 = """namespace N.A.B
+            [<AutoOpen>]
+            module M =
+                let x = 42
+        """
+            let source2 = """
+            open N.A.B
+            let y = x
+        """
+            expectDependency [source1; source2] [1,2]
+        }
+
         test "active pattern 1" {
             let source1 = """module M
             let (|Positive|_|) x = if x > 0 then Some x else None

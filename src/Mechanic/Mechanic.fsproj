@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\paket-files\Microsoft\visualfsharp\src\fsharp\FSharp.Build\Fsc.fs">
+    <Compile Include="../../paket-files/Microsoft/visualfsharp/src/fsharp/FSharp.Build/Fsc.fs">
       <Paket>True</Paket>
       <Link>paket-files/Fsc.fs</Link>
     </Compile>

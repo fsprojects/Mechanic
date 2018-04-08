@@ -10,7 +10,6 @@ open Fake.Core.TargetOperators
 open Fake.IO.Globbing.Operators
 
 // Helpers and settings that figure themselves out
-
 let projectsPattern = "src/**/*.fsproj"
 let testProjectsPattern = "src/**/*Tests.fsproj"
 

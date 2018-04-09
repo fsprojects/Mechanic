@@ -64,25 +64,25 @@ let rec getTypes synType =
 let getTypesUse synType = getTypes synType |> List.map (fun (x,r) -> mkUse x r)
 let getTypesDef synType = getTypes synType |> List.map (fun (x,_) -> mkDef x)
 
-let rec getSynConstructorArgs localRange = function
-    | SynConstructorArgs.Pats ps -> ps |> List.collect (visitPattern' true localRange)
-    | SynConstructorArgs.NamePatPairs (ps, _) -> ps |> List.map snd |> List.collect (visitPattern' true localRange)
+let rec getSynConstructorArgs symbolCons localRange = function
+    | SynConstructorArgs.Pats ps -> ps |> List.collect (visitPattern' true symbolCons localRange)
+    | SynConstructorArgs.NamePatPairs (ps, _) -> ps |> List.map snd |> List.collect (visitPattern' true symbolCons localRange)
 
-and visitPattern' isUse localRange x = 
+and visitPattern' isUse symbolCons localRange x = 
     let visitPattern = visitPattern' isUse
     match x with
-    | SynPat.Named(SynPat.Wild(_), name, _, _, range) -> [mkDef <| Identificator name.idText]
+    | SynPat.Named(SynPat.Wild(_), name, _, _, range) -> [mkDef <| symbolCons name.idText]
     | SynPat.OptionalVal(name, range)
-    | SynPat.Named(_, name, _, _, range) -> [mkDef <| Identificator name.idText]
+    | SynPat.Named(_, name, _, _, range) -> [mkDef <| symbolCons name.idText]
     | SynPat.LongIdent(LongIdentWithDots(ident, _), _, _, args, _, range) -> 
-        (getSynConstructorArgs localRange args |> List.map (defToLocal localRange))
-        @ if isUse then [mkUse (Identificator (visitLongIdent ident)) range] else [mkDef <| Identificator (visitLongIdent ident)]
-    | SynPat.Typed(p, typ, _) -> visitPattern localRange p @ getTypesUse typ
-    | SynPat.Paren(p, _) -> visitPattern localRange p
+        (getSynConstructorArgs symbolCons localRange args |> List.map (defToLocal localRange))
+        @ if isUse then [mkUse (Pattern (visitLongIdent ident)) range] else [mkDef <| symbolCons (visitLongIdent ident)]
+    | SynPat.Typed(p, typ, _) -> visitPattern symbolCons localRange p @ getTypesUse typ
+    | SynPat.Paren(p, _) -> visitPattern symbolCons localRange p
     | SynPat.Ands(ps, _)
     | SynPat.ArrayOrList(_ , ps, _)
-    | SynPat.Tuple(ps, _) -> ps |> List.collect (visitPattern localRange)
-    | SynPat.Or(p1, p2, _) -> visitPattern localRange p1 @ visitPattern localRange p2
+    | SynPat.Tuple(ps, _) -> ps |> List.collect (visitPattern symbolCons localRange)
+    | SynPat.Or(p1, p2, _) -> visitPattern symbolCons localRange p1 @ visitPattern symbolCons localRange p2
     | _ -> []
 
 let visitPattern = visitPattern' false
@@ -95,7 +95,7 @@ let rec visitSimplePattern localRange = function
 let rec getBind localRange bindings =
     bindings |> Seq.collect (fun binding ->
         let (Binding(_, _, _, _, _, _, _, pat, _, _, _, _)) = binding
-        visitPattern localRange pat)
+        visitPattern Identificator localRange pat)
     |> Seq.toList
 
 let getSymbolsFromTypeDefn (SynTypeDefn.TypeDefn(SynComponentInfo.ComponentInfo _, repr,_,_)) =
@@ -233,7 +233,7 @@ let getUsedSymbols (tree: ParsedInput) =
                 xs <- xs @ [mkUse (RecordField(visitLongIdent ident)) range])
             None
         override __.VisitMatchClause(defF, Clause(pat, _, _, range, _)) =
-            xs <- (visitPattern range pat |> List.map (defToUse range)) @ xs
+            xs <- (visitPattern Pattern range pat |> List.map (defToUse range)) @ xs
             None        
         override __.VisitComponentInfo(path, _) =
             let types = path |> getTypeDefnFromPath |> Option.map getSymbolsFromTypeDefn |> Option.defaultValue []

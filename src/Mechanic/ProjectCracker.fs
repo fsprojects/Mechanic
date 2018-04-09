@@ -27,7 +27,7 @@ module ProjectRecognizer =
             getProjectType sr 3
 
 module Environment =
-  let msbuild = Fake.DotNet.MsBuild.msBuildExe
+  let msbuild = Fake.DotNet.MSBuild.msBuildExe
 
 module MSBuildPrj = Dotnet.ProjInfo.Inspect
 

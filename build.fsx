@@ -10,21 +10,19 @@ open Fake.Core.TargetOperators
 open Fake.IO.Globbing.Operators
 
 // Helpers and settings that figure themselves out
-
 let projectsPattern = "src/**/*.fsproj"
 let testProjectsPattern = "src/**/*Tests.fsproj"
 
 let srcProjects = !! projectsPattern -- testProjectsPattern
 let testProjects = !! testProjectsPattern
-let installDotNet _ = 
-    DotNet.Install DotNet.Release_2_1_4
+let installDotNet = lazy DotNet.install DotNet.Release_2_1_4
 
 // Read additional information from the release notes document
 let releaseNotes = File.ReadAllLines "RELEASE_NOTES.md"
 
 let releaseNotesData =
     releaseNotes
-    |> ReleaseNotes.parseAllReleaseNotes
+    |> ReleaseNotes.parseAll
 
 let release = List.head releaseNotesData
 
@@ -33,41 +31,45 @@ let release = List.head releaseNotesData
 let clean _ = !! "src/**/bin"++"**/obj" |> Shell.CleanDirs
 
 let pokeVersion oldVersion newVersion project =
-    if Xml.Read false project "" "" "/Project/PropertyGroup/PackageVersion" |> Seq.exists ((=) oldVersion) then
-        Xml.PokeInnerText project "Project/PropertyGroup/PackageVersion" newVersion
+    if Xml.read false project "" "" "/Project/PropertyGroup/PackageVersion" |> Seq.exists ((=) oldVersion) then
+        Xml.pokeInnerText project "Project/PropertyGroup/PackageVersion" newVersion
 
 let setVersion _ =
     srcProjects |> Seq.iter (pokeVersion "0.0.0" release.NugetVersion)
-    Target.ActivateFinal "ResetVersion"
+    Target.activateFinal "ResetVersion"
 
 let resetVersion _ = srcProjects |> Seq.iter (pokeVersion release.NugetVersion "0.0.0")
 
-let build _ = DotNet.Build (fun c ->
+let inline withWorkDir wd =
+    DotNet.Options.lift installDotNet.Value
+    >> DotNet.Options.withWorkingDirectory wd
+
+let build _ = DotNet.build (fun c ->
     { c with
-        Configuration = DotNet.Debug
-        Common = { c.Common with WorkingDirectory = "src" } } ) ""
+        Configuration = DotNet.Debug }
+    |> withWorkDir "src") ""
 
 let failOnError (p : ProcessResult) =
     if p.ExitCode <> 0 then failwithf "process failed with exit code %d" p.ExitCode
 let test _ =
-    testProjects |> Seq.map (sprintf "-p \"%s\"") |> Seq.iter (DotNet.Exec id "run" >> failOnError)
+    testProjects |> Seq.map (sprintf "-p \"%s\"") |> Seq.iter (DotNet.exec installDotNet.Value "run" >> failOnError)
 
 let releasePackage _ =
-    DotNet.Publish (fun c ->
+    DotNet.publish (fun c ->
     { c with
-        Configuration = DotNet.Release
-        Common = { c.Common with WorkingDirectory = "src/Mechanic.CommandLine" } }) ""
+        Configuration = DotNet.Release }
+    |> withWorkDir "src/Mechanic.CommandLine") ""
 
 
 // Build target definitions
 
-Target.Create "Clean" clean
-Target.Create "InstallDotNetCore" installDotNet
-Target.Create "Build" build
-Target.Create "Test" test
-Target.Create "SetVersion" setVersion
-Target.CreateFinal "ResetVersion" resetVersion
-Target.Create "Release" releasePackage
+Target.create "Clean" clean
+Target.create "InstallDotNetCore" (fun _ -> ignore installDotNet.Value)
+Target.create "Build" build
+Target.create "Test" test
+Target.create "SetVersion" setVersion
+Target.createFinal "ResetVersion" resetVersion
+Target.create "Release" releasePackage
 
 "Clean"
   ==> "InstallDotNetCore"
@@ -76,4 +78,4 @@ Target.Create "Release" releasePackage
   ==> "Test"
   ==> "Release"
 
-Target.RunOrDefault "Test"
+Target.runOrDefault "Test"

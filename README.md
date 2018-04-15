@@ -2,6 +2,9 @@
 
 # Mechanic
 
+logo/mechanic.png
+![Mechanic](logo/mechanic.png "Mechanic")
+
 ## Project idea
 
 The F# compiler needs to get files passed in correct order for compilation, so that everything is declared before usage. 

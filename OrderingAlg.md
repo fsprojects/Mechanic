@@ -19,6 +19,7 @@ We divide symbol into these groups:
 * Identificator
 * Record field
 * Type
+* Pattern
 
 For collecting, `AstTraverse` code was copied from https://github.com/fsharp/FSharp.Compiler.Service/blob/13ecd8d4d080465bce4f49de72e4c13c6005e842/src/fsharp/vs/ServiceParseTreeWalk.fs and altered to support going through the whole tree. 
 This allows us to traverse AST and cherry-pick only certain type of nodes.

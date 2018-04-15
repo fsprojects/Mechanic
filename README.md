@@ -1,7 +1,10 @@
 [![Join the chat at https://gitter.im/fsprojects/Mechanic](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/fsprojects/Mechanic?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 # Mechanic
-
+img[alt="minipic"] { 
+  max-width:  20px; 
+  display: block;
+}
 ![Mechanic](logo/mechanic.png){:.some-css-class style="width: 200px"}
 
 ## Project idea

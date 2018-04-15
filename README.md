@@ -2,8 +2,7 @@
 
 # Mechanic
 
-logo/mechanic.png
-![Mechanic](logo/mechanic.png "Mechanic")
+![Mechanic](logo/mechanic.png =250x)
 
 ## Project idea
 

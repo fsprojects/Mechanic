@@ -13,7 +13,7 @@ module List =
     let rec allPermutations = function
       | [] -> [[]]
       | e::xs -> List.collect (distribute e) (allPermutations xs)
-    
+
     let swapPairAtIndex i xs =
         match List.skip i xs with
         | x :: y :: rest -> (List.take i xs) @ (y :: x :: rest)

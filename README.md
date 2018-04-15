@@ -2,7 +2,7 @@
 
 # Mechanic
 
-![Mechanic](logo/mechanic.png =250x)
+![Mechanic](logo/mechanic.png){:.some-css-class style="width: 200px"}
 
 ## Project idea
 

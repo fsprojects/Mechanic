@@ -44,7 +44,7 @@ let defToUse defaultRange = function
 let filterDefs xs = xs |> List.choose (function | Def x -> Some x | Use _ -> None)
 let filterUses xs = xs |> List.choose (function | Use x -> Some x | Def _ -> None)
 
-type OpenDecl = { OpenName: string; Pos: Range.pos; Range: Range.range; IsAutoOpen: bool }
+type OpenDecl = { OpenName: string; Pos: Range.pos; Range: Range.range; AutoOpenParent: string option }
 type OpenDeclGroup = { Opens: list<OpenDecl>; UsedSymbols: list<Symbol> }
 
 let visitLongIdent (ident: LongIdent) =
@@ -272,8 +272,10 @@ let getOpenDecls (defs: SymbolDef list) (tree: ParsedInput) =
         ) |> List.rev |> Namespace.joinByDot
     let openWithNamespace path x = getNamespace path |> Option.map (fun n -> Namespace.merge n x) |> Option.defaultValue x
     let openWithFullNamespace path x = getFullNamespace path |> fun n -> Namespace.merge n x
-    let mkOpenWith openName (range: Range.range) path = 
-        { OpenName = openName; Pos = range.Start; Range = getScope path |> Option.get; IsAutoOpen = false}
+    let mkOpenWith openName (range: Range.range) path autoOpenParent = 
+        { OpenName = openName; Pos = range.Start; Range = getScope path |> Option.get; AutoOpenParent = autoOpenParent}
+    let isAutoOpen (attrs: SynAttributes) = attrs |> List.exists (fun  attr -> visitLongIdent attr.TypeName.Lid = "AutoOpen")
+
     let mutable xs = []
     let visitor = { new AstVisitorBase<_>() with
         override __.VisitExpr(_, subExprF, defF, e) =
@@ -281,18 +283,18 @@ let getOpenDecls (defs: SymbolDef list) (tree: ParsedInput) =
         override __.VisitModuleDecl(path, defF, d) =
             match d with
             | SynModuleDecl.Open(LongIdentWithDots(lId, _),r) -> 
-                xs <- mkOpenWith (visitLongIdent lId |> openWithNamespace path) r path :: xs
-                xs <- mkOpenWith (visitLongIdent lId) r path :: xs
+                xs <- mkOpenWith (visitLongIdent lId |> openWithNamespace path) r path None :: xs
+                xs <- mkOpenWith (visitLongIdent lId) r path None :: xs
                 defF d
-            | SynModuleDecl.NestedModule(ComponentInfo(_,_,_,lId,_,_,_,_),_,_,_,r) -> 
-                xs <- mkOpenWith (visitLongIdent lId |> openWithFullNamespace path) r path :: xs 
+            | SynModuleDecl.NestedModule(ComponentInfo(attrs,_,_,lId,_,_,_,_),_,_,_,r) -> 
+                let autoOpenParent = if isAutoOpen attrs then Some (getFullNamespace path) else None
+                xs <- mkOpenWith (visitLongIdent lId |> openWithFullNamespace path) r path autoOpenParent :: xs 
                 defF d
             | _ -> defF d
         override __.VisitModuleOrNamespace(SynModuleOrNamespace(lId,_,isModule,_,_,attrs,_,r)) =
             let ident = visitLongIdent lId
-            let isAutoOpen = attrs |> List.exists (fun  attr -> visitLongIdent attr.TypeName.Lid = "AutoOpen")
-            if isModule then xs <- { OpenName = Namespace.removeLastPart ident; Pos = r.Start; Range = r; IsAutoOpen = false } :: xs 
-            xs <- { OpenName = ident; Pos = r.Start; Range = r; IsAutoOpen = isAutoOpen } :: xs 
+            if isModule then xs <- { OpenName = Namespace.removeLastPart ident; Pos = r.Start; Range = r; AutoOpenParent = None } :: xs 
+            xs <- { OpenName = ident; Pos = r.Start; Range = r; AutoOpenParent = if isAutoOpen attrs then Some "" else None } :: xs 
             None
         }
     Traverse(tree, visitor) |> ignore
@@ -302,7 +304,7 @@ let getOpenDecls (defs: SymbolDef list) (tree: ParsedInput) =
         opensAndUses |> List.collect (fun (openD, uses) -> uses |> List.map (fun u -> u, openD))
         |> List.groupBy (fun (u,_) -> u.SymbolName, u.Range) |> List.map (fun ((u,_), xs) -> 
             let opensWithRange = xs |> List.map snd 
-            u, (opensWithRange |> List.sortBy (fun o -> (if o.IsAutoOpen then 0 else 1), o.Pos.Line, o.Pos.Column)))
+            u, (opensWithRange |> List.sortBy (fun o -> (if o.AutoOpenParent.IsSome then 0 else 1), o.Pos.Line, o.Pos.Column)))
     //printfn "UsesWithOpens: %A" usesWithOpens
     let r =
         let openGroups = 

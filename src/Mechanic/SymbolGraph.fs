@@ -7,8 +7,14 @@ open AstSymbolCollector
 
 let getDependencies options files maybeProjFile =
     let depsData = files |> List.map (fun (f: string) -> if f.EndsWith ".fs" then SymbolGetter.getSymbols options f else f, [], [])
-    let autoOpens = depsData |> List.collect (fun (_,_,g) -> g |> List.collect (fun x -> x.Opens |> List.filter (fun o -> o.IsAutoOpen)))
-    let depsData = depsData |> List.map (fun (f,defs,opens) -> f, defs, opens |> List.map (fun g -> { g with Opens = g.Opens @ autoOpens }))
+    let autoOpens parents = 
+        depsData |> List.collect (fun (_,_,g) -> g |> List.collect (fun x -> x.Opens |> List.filter (fun o -> 
+            match o.AutoOpenParent with
+            | Some p when p = "" || parents |> List.exists (fun x -> x.OpenName = p) -> true
+            | _ -> false)))
+    let depsData = 
+        depsData |> List.map (fun (f,defs,opens) -> 
+            f, defs, opens |> List.map (fun g -> { g with Opens = g.Opens @ autoOpens g.Opens }))
     let findEntity = maybeProjFile |> Option.map SymbolGetter.getExternalFindDefFun |> Option.defaultValue (fun _ -> None)
     let allDefsMap = 
         let defs = depsData |> Seq.collect (fun (f,defs,_) -> defs |> List.map (fun d -> Symbol.map lastPart d, (d, Some f)))

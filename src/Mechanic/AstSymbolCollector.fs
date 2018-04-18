@@ -8,12 +8,14 @@ type Symbol =
     | Identificator of string
     | RecordField of string
     | TypeSymbol of string
+    | Pattern of string
 module Symbol = 
-    let get x = match x with |Identificator s -> s |RecordField s -> s |TypeSymbol s -> s
+    let get x = match x with |Identificator s -> s |RecordField s -> s |TypeSymbol s -> s |Pattern s -> s
     let map f = function
         | Identificator s -> Identificator (f s)
         | RecordField s -> RecordField (f s)
         | TypeSymbol s -> TypeSymbol (f s)
+        | Pattern s -> Pattern (f s)
 
 type SymbolDef = { SymbolName: Symbol; LocalRange: Range.range option }
 type SymbolUse = { SymbolName: Symbol; Range: Range.range }
@@ -62,25 +64,25 @@ let rec getTypes synType =
 let getTypesUse synType = getTypes synType |> List.map (fun (x,r) -> mkUse x r)
 let getTypesDef synType = getTypes synType |> List.map (fun (x,_) -> mkDef x)
 
-let rec getSynConstructorArgs localRange = function
-    | SynConstructorArgs.Pats ps -> ps |> List.collect (visitPattern' true localRange)
-    | SynConstructorArgs.NamePatPairs (ps, _) -> ps |> List.map snd |> List.collect (visitPattern' true localRange)
+let rec getSynConstructorArgs symbolCons localRange = function
+    | SynConstructorArgs.Pats ps -> ps |> List.collect (visitPattern' true symbolCons localRange)
+    | SynConstructorArgs.NamePatPairs (ps, _) -> ps |> List.map snd |> List.collect (visitPattern' true symbolCons localRange)
 
-and visitPattern' isUse localRange x = 
+and visitPattern' isUse symbolCons localRange x = 
     let visitPattern = visitPattern' isUse
     match x with
-    | SynPat.Named(SynPat.Wild(_), name, _, _, range) -> [mkDef <| Identificator name.idText]
+    | SynPat.Named(SynPat.Wild(_), name, _, _, range) -> [mkDef <| symbolCons name.idText]
     | SynPat.OptionalVal(name, range)
-    | SynPat.Named(_, name, _, _, range) -> [mkDef <| Identificator name.idText]
+    | SynPat.Named(_, name, _, _, range) -> [mkDef <| symbolCons name.idText]
     | SynPat.LongIdent(LongIdentWithDots(ident, _), _, _, args, _, range) -> 
-        (getSynConstructorArgs localRange args |> List.map (defToLocal localRange))
-        @ if isUse then [mkUse (Identificator (visitLongIdent ident)) range] else [mkDef <| Identificator (visitLongIdent ident)]
-    | SynPat.Typed(p, typ, _) -> visitPattern localRange p @ getTypesUse typ
-    | SynPat.Paren(p, _) -> visitPattern localRange p
+        (getSynConstructorArgs symbolCons localRange args |> List.map (defToLocal localRange))
+        @ if isUse then [mkUse (Pattern (visitLongIdent ident)) range] else [mkDef <| symbolCons (visitLongIdent ident)]
+    | SynPat.Typed(p, typ, _) -> visitPattern symbolCons localRange p @ getTypesUse typ
+    | SynPat.Paren(p, _) -> visitPattern symbolCons localRange p
     | SynPat.Ands(ps, _)
     | SynPat.ArrayOrList(_ , ps, _)
-    | SynPat.Tuple(ps, _) -> ps |> List.collect (visitPattern localRange)
-    | SynPat.Or(p1, p2, _) -> visitPattern localRange p1 @ visitPattern localRange p2
+    | SynPat.Tuple(ps, _) -> ps |> List.collect (visitPattern symbolCons localRange)
+    | SynPat.Or(p1, p2, _) -> visitPattern symbolCons localRange p1 @ visitPattern symbolCons localRange p2
     | _ -> []
 
 let visitPattern = visitPattern' false
@@ -93,7 +95,7 @@ let rec visitSimplePattern localRange = function
 let rec getBind localRange bindings =
     bindings |> Seq.collect (fun binding ->
         let (Binding(_, _, _, _, _, _, _, pat, _, _, _, _)) = binding
-        visitPattern localRange pat)
+        visitPattern Identificator localRange pat)
     |> Seq.toList
 
 let getSymbolsFromTypeDefn (SynTypeDefn.TypeDefn(SynComponentInfo.ComponentInfo _, repr,_,_)) =
@@ -115,7 +117,7 @@ let getSymbolsFromTypeDefn (SynTypeDefn.TypeDefn(SynComponentInfo.ComponentInfo 
                         | SynUnionCaseType.UnionCaseFields fields ->
                             fields |> List.collect (function 
                                 SynField.Field(_,_,_, synType,_,_,_, _) -> getTypesUse synType)
-                    mkDef (Identificator ident.idText) :: types)
+                    mkDef (Pattern ident.idText) :: mkDef (Identificator ident.idText) :: types)
         | _ -> []
     | SynTypeDefnRepr.ObjectModel (_kind, members, _range) ->
         members |> List.collect (function 
@@ -161,12 +163,16 @@ let getBinding path localRange x =
                 getBind localRange [x] |> List.map (defToLocal <| Range.mkRange r.FileName x.RangeOfHeadPat.Start r.End)) |> Option.defaultValue []
         | _ -> getBind localRange [x]
 
-let extractActivePatterns = function
+let extractActivePatterns = 
+    let isActivePattern (s: string) = s.StartsWith "|" && s.EndsWith "|"
+    function
     | Def ({ SymbolName = Identificator ident } as symbol) ->
-        ident |> Namespace.splitByDot |> List.map (fun s ->
-            if s.StartsWith "|" && s.EndsWith "|" then s.Split [|'|'|] |> Seq.filter (fun x -> x <> "_" && x <> "") |> Seq.toList
-            else [s])
-        |> List.cartesianMult |> List.map (fun x -> Def { symbol with SymbolName = Identificator (Namespace.joinByDot x) })
+        let prefix = ident |> Namespace.removeLastPart
+        ident |> Namespace.lastPart |> (fun s ->
+            if isActivePattern s then Some (s.Split [|'|'|] |> Seq.filter (fun x -> x <> "_" && x <> "") |> Seq.toList)
+            else None)
+        |> Option.map (List.map (fun x -> Def { symbol with SymbolName = Pattern (Namespace.joinByDot [prefix; x]) }))
+        |> Option.defaultValue [Def symbol]
     | x -> [x]
 
 let getDefSymbols (tree: ParsedInput) =
@@ -227,7 +233,7 @@ let getUsedSymbols (tree: ParsedInput) =
                 xs <- xs @ [mkUse (RecordField(visitLongIdent ident)) range])
             None
         override __.VisitMatchClause(defF, Clause(pat, _, _, range, _)) =
-            xs <- (visitPattern range pat |> List.map (defToUse range)) @ xs
+            xs <- (visitPattern Pattern range pat |> List.map (defToUse range)) @ xs
             None        
         override __.VisitComponentInfo(path, _) =
             let types = path |> getTypeDefnFromPath |> Option.map getSymbolsFromTypeDefn |> Option.defaultValue []

@@ -14,10 +14,6 @@ module List =
       | [] -> [[]]
       | e::xs -> List.collect (distribute e) (allPermutations xs)
 
-    let rec cartesianMult = function
-    | [] -> [[]]
-    | xs::rest -> xs |> List.collect (fun x -> cartesianMult rest |> List.map (fun ys -> x :: ys))
-
     let swapPairAtIndex i xs =
         match List.skip i xs with
         | x :: y :: rest -> (List.take i xs) @ (y :: x :: rest)

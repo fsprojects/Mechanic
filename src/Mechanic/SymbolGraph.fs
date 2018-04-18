@@ -63,11 +63,10 @@ let getDependencies options files maybeProjFile =
         |> List.choose (fun (f1,f2,x) -> f1 |> Option.bind (fun f1 -> if f1 <> f2 then Some (f1, f2, x) else None))
         |> List.groupBy (fun (f1, f2, _) -> f1, f2) |> List.map (fun ((f1, f2), xs) -> 
             f1, f2, xs |> List.map (fun (_,_,x) -> x) |> List.distinct)
-    if options.LogOutput.FileDependencies then
-        if options.LogOutput.FileDependenciesWithSymbols then    
-            printfn "%A" deps
-        else        
-            printfn "%A" (deps |> List.map (fun (f1, f2, _) -> f1, f2))
+    if options.LogOutput.FileDependenciesWithSymbols then    
+        printfn "%A" deps
+    elif options.LogOutput.FileDependencies then
+        printfn "%A" (deps |> List.map (fun (f1, f2, _) -> f1, f2))
     deps
 
 let solveOrder (options: Mechanic.Options) fileNameSelector maybeProjFile xs =
